@@ -1,6 +1,4 @@
 // Run every test:  node tests/run-all.js
-require("./taylor.test.js");
-require("./vectors.test.js");
-require("./projectile.test.js");
-require("./questions.test.js");
-require("./xp.test.js");
+// (Runs tests/*.test.js automatically, so new test files are picked up.)
+const fs = require("fs");
+fs.readdirSync(__dirname).filter((f) => f.endsWith(".test.js")).sort().forEach((f) => require("./" + f));

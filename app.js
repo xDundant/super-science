@@ -13,13 +13,24 @@
 
   const escapeHTML = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+  const SUBJECTS = ["All", "Maths", "Physics", "Chemistry", "Biology"];
+  let subject = "All"; // home screen filter (remembered while the app is open)
+
   function renderHome() {
     document.title = SITE_TITLE;
+    const count = (s) => SS.concepts.filter((c) => s === "All" || c.tag === s).length;
     app.innerHTML = `
       <p class="intro">Pick a concept and play with it.</p>
+      <div class="chips" role="group" aria-label="Filter by subject">
+        ${SUBJECTS.map((s) => `
+          <button type="button" class="chip chip-${s.toLowerCase()}" data-subject="${s}" aria-pressed="${s === subject}">
+            ${s} <span class="chip-count">${count(s)}</span>
+          </button>`).join("")}
+      </div>
+      <p class="empty" hidden>No concepts here yet. Coming soon!</p>
       <ul class="cards">
         ${SS.concepts.map((c) => `
-          <li>
+          <li data-subject="${escapeHTML(c.tag)}">
             <a class="card" href="#${c.id}">
               <span class="tag tag-${c.tag.toLowerCase()}">${escapeHTML(c.tag)}</span>
               <span class="card-title">${escapeHTML(c.title)}</span>
@@ -28,6 +39,14 @@
             </a>
           </li>`).join("")}
       </ul>`;
+
+    function applyFilter() {
+      app.querySelectorAll(".chip").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.subject === subject)));
+      app.querySelectorAll(".cards li").forEach((li) => { li.hidden = subject !== "All" && li.dataset.subject !== subject; });
+      app.querySelector(".empty").hidden = count(subject) > 0;
+    }
+    app.querySelectorAll(".chip").forEach((b) => b.addEventListener("click", () => { subject = b.dataset.subject; applyFilter(); }));
+    applyFilter();
   }
 
   // A page with a back link and a titled card. fill(section) adds the content

@@ -6,6 +6,7 @@
   --cyan: #4DD9FF;
   --red: #FF4D5E;
   --green: #2EE59D;
+  --violet: #B388FF;
   --white: #FFFFFF;
   --muted: #A9B4D6;
   --max-width: 860px;
@@ -675,6 +676,91 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
+/* ---------- Subject filter chips (home) ---------- */
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 16px; }
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--panel);
+  border: 1.5px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.chip:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.chip[aria-pressed="true"] { color: var(--bg); background: var(--amber); border-color: var(--amber); }
+.chip-count { font-size: 0.75rem; opacity: 0.75; font-variant-numeric: tabular-nums; }
+.empty { text-align: center; color: var(--muted); }
+.cards li[hidden] { display: none; }
+
+.tag-chemistry { color: var(--violet); background: rgba(179, 136, 255, 0.12); border: 1px solid rgba(179, 136, 255, 0.4); }
+.tag-biology { color: var(--green); background: rgba(46, 229, 157, 0.12); border: 1px solid rgba(46, 229, 157, 0.4); }
+
+/* ---------- Shared concept controls ---------- */
+.stats--4 { grid-template-columns: repeat(2, 1fr); }
+.stats--2 { grid-template-columns: repeat(2, 1fr); }
+.stat-green { color: var(--green); }
+.stat-cyan { color: var(--cyan); }
+.stat-white { color: var(--white); }
+
+.btn-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 14px 0 4px; }
+.btn-row .btn, .btn-row .btn-secondary { margin: 0; width: auto; flex: 1 1 140px; max-width: 240px; }
+.btn-secondary {
+  display: block;
+  padding: 15px 20px;
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--white);
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  border-radius: 999px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.btn-secondary:hover { border-color: var(--amber); }
+.btn-secondary:focus-visible { outline: 3px solid var(--cyan); outline-offset: 3px; }
+.btn-secondary[aria-pressed="true"] { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
+.btn:disabled, .btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.select-control { display: flex; flex-direction: column; gap: 6px; margin: 12px 4px 0; }
+.select-control label { color: var(--muted); font-size: 0.95rem; text-align: center; }
+.select-control select {
+  min-height: 48px;
+  padding: 10px 14px;
+  font: inherit;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--white);
+  background: var(--bg);
+  border: 1.5px solid rgba(77, 217, 255, 0.4);
+  border-radius: 12px;
+}
+.select-control select:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.controls-2 { display: grid; grid-template-columns: 1fr; gap: 4px; }
+
+.big-eq {
+  text-align: center;
+  margin: 12px 0 0;
+  font-family: "Cambria Math", "STIX Two Math", Georgia, serif;
+  font-size: clamp(1.15rem, 5vw, 1.5rem);
+  color: var(--amber);
+  min-height: 1.6em;
+}
+.big-eq.win { color: var(--white); text-shadow: 0 0 16px rgba(255, 179, 0, 0.7); }
+.note { text-align: center; color: var(--muted); font-size: 0.9rem; margin: 10px 0 0; }
+.warn { text-align: center; color: var(--red); font-weight: 800; margin: 10px 0 0; min-height: 1.4em; }
+.ok { text-align: center; color: var(--green); font-weight: 800; margin: 10px 0 0; min-height: 1.4em; }
+.graph-pair { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.graph-title { margin: 10px 0 4px; text-align: center; font-size: 0.85rem; color: var(--muted); }
+
 /* ---------- Footer ---------- */
 .site-footer {
   text-align: center;
@@ -701,6 +787,9 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   .quiz { padding: 26px 28px 28px; }
   .quiz-options { grid-template-columns: 1fr 1fr; }
   .aura-grid { grid-template-columns: repeat(4, 1fr); }
+  .stats--4 { grid-template-columns: repeat(4, 1fr); }
+  .controls-2 { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .graph-pair { grid-template-columns: 1fr 1fr; }
   .stat-label { font-size: 0.85rem; }
 }
 

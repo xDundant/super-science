@@ -98,5 +98,97 @@ window.SuperScience = (function () {
     return g;
   }
 
-  return { concepts, register, questions, addQuestions, escapeHTML, svgEl, slider, watchWidth, arrow };
+  /* ---------- Helpers shared by the concepts ---------- */
+
+  const reducedMotion = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+
+  // Number with a proper minus sign, e.g. fmt(-2.5, 1) -> "−2.5"
+  function fmt(value, dp) {
+    const text = dp === undefined ? String(value) : value.toFixed(dp);
+    return text.replace(/^-/, "−").replace(/^−(0\.?0*)$/, "$1"); // no "−0.00"
+  }
+
+  // Animation loop: calls fn(dt) every frame with dt in seconds (max 0.05).
+  // Return false from fn to stop. Returns a stop() function.
+  function loop(fn) {
+    let last = null, id = 0, stopped = false;
+    function frame(now) {
+      if (stopped) return;
+      const dt = last === null ? 0 : Math.min(0.05, (now - last) / 1000);
+      last = now;
+      if (fn(dt) === false) { stopped = true; return; }
+      id = requestAnimationFrame(frame);
+    }
+    id = requestAnimationFrame(frame);
+    return () => { stopped = true; cancelAnimationFrame(id); };
+  }
+
+  // Row of live number tiles. items: [{ key, label, cls }]. Returns set(key, text).
+  function stats(parent, items) {
+    const wrap = document.createElement("div");
+    wrap.className = "stats" + (items.length === 4 ? " stats--4" : items.length === 2 ? " stats--2" : "");
+    wrap.innerHTML = items.map((i) =>
+      `<div class="stat"><span class="stat-label">${i.label}</span><span class="stat-value ${i.cls || ""}" data-k="${i.key}"></span></div>`).join("");
+    parent.appendChild(wrap);
+    return (key, text) => { wrap.querySelector(`[data-k="${key}"]`).textContent = text; };
+  }
+
+  // Labelled dropdown. opts: { id, label, options: [[value, text], ...], value }. Returns the <select>.
+  function select(parent, opts) {
+    const wrap = document.createElement("div");
+    wrap.className = "select-control";
+    wrap.innerHTML = `<label for="${opts.id}">${opts.label}</label><select id="${opts.id}">` +
+      opts.options.map(([v, t]) => `<option value="${v}"${v === opts.value ? " selected" : ""}>${t}</option>`).join("") + `</select>`;
+    parent.appendChild(wrap);
+    return wrap.querySelector("select");
+  }
+
+  // Size an <svg> to its container and clear it. ratio = height / width (phone, wider screens).
+  function fit(svg, ratioPhone, ratioWide) {
+    const W = Math.max(260, Math.round(svg.parentElement.clientWidth || 600));
+    const H = Math.round(W * (W < 600 ? ratioPhone : ratioWide));
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.innerHTML = "";
+    return { W, H, font: W < 500 ? 11 : 13 };
+  }
+
+  // Grid, axes and tick labels for a graph. Returns { sx, sy, clip } where sx/sy turn
+  // data values into screen positions and clip is a clip-path URL for the plot area.
+  //   o: { W, H, font, x: [min, max], y: [min, max], xTicks, yTicks, xFmt, yFmt, xLabel, yLabel, pad, id }
+  function axes(svg, o) {
+    const pad = Object.assign({ left: 40, right: 12, top: 14, bottom: 30 }, o.pad);
+    const sx = (v) => pad.left + ((v - o.x[0]) / (o.x[1] - o.x[0])) * (o.W - pad.left - pad.right);
+    const sy = (v) => o.H - pad.bottom - ((v - o.y[0]) / (o.y[1] - o.y[0])) * (o.H - pad.top - pad.bottom);
+    const xFmt = o.xFmt || ((v) => fmt(v)), yFmt = o.yFmt || ((v) => fmt(v));
+    const id = (o.id || "plot") + "-clip";
+    const clip = svgEl("clipPath", { id }, svgEl("defs", {}, svg));
+    svgEl("rect", { x: pad.left, y: pad.top, width: o.W - pad.left - pad.right, height: o.H - pad.top - pad.bottom }, clip);
+
+    const grid = svgEl("g", { stroke: "rgba(77, 217, 255, 0.12)", "stroke-width": 1 }, svg);
+    const labels = svgEl("g", { fill: "#4DD9FF", "font-size": o.font, "font-family": "system-ui, sans-serif" }, svg);
+    (o.xTicks || []).forEach((v) => {
+      svgEl("line", { x1: sx(v), y1: sy(o.y[0]), x2: sx(v), y2: sy(o.y[1]) }, grid);
+      svgEl("text", { x: sx(v), y: o.H - pad.bottom + o.font + 6, "text-anchor": "middle" }, labels).textContent = xFmt(v);
+    });
+    (o.yTicks || []).forEach((v) => {
+      svgEl("line", { x1: sx(o.x[0]), y1: sy(v), x2: sx(o.x[1]), y2: sy(v) }, grid);
+      svgEl("text", { x: pad.left - 6, y: sy(v) + o.font * 0.35, "text-anchor": "end" }, labels).textContent = yFmt(v);
+    });
+    const ax = svgEl("g", { stroke: "#4DD9FF", "stroke-width": 1.5, opacity: 0.8 }, svg);
+    const x0 = o.x[0] <= 0 && o.x[1] >= 0 ? 0 : o.x[0];
+    const y0 = o.y[0] <= 0 && o.y[1] >= 0 ? 0 : o.y[0];
+    svgEl("line", { x1: sx(o.x[0]), y1: sy(y0), x2: sx(o.x[1]), y2: sy(y0) }, ax);
+    svgEl("line", { x1: sx(x0), y1: sy(o.y[0]), x2: sx(x0), y2: sy(o.y[1]) }, ax);
+    if (o.xLabel) svgEl("text", { x: o.W - pad.right, y: sy(y0) - 6, "text-anchor": "end", opacity: 0.75 }, labels).textContent = o.xLabel;
+    if (o.yLabel) svgEl("text", { x: sx(x0) + 6, y: pad.top + o.font, opacity: 0.75 }, labels).textContent = o.yLabel;
+    return { sx, sy, clip: `url(#${id})`, pad };
+  }
+
+  // SVG path through points [[x, y], ...] already in screen coordinates.
+  const pathD = (pts) => pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join("");
+
+  return {
+    concepts, register, questions, addQuestions, escapeHTML, svgEl, slider, watchWidth, arrow,
+    reducedMotion, fmt, loop, stats, select, fit, axes, pathD,
+  };
 })();
