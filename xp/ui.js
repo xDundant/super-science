@@ -32,17 +32,40 @@
   }
 
   /* ---------- Header Power Level bar ---------- */
+  // The bar's parts are created once; after that only their text and the fill's
+  // scale change, so the fill slides smoothly (CSS transition on transform).
+  let parts = null, shownLevel = null;
   function renderBar() {
     if (!bar) return;
     const info = Engine.levelInfo(state.xp);
     const streak = Engine.currentStreak(state);
     applyAura(bar);
-    bar.innerHTML = `
-      <span class="power-rank">${esc(info.rank)}</span>
-      <span class="power-level">Lv <b>${info.level}</b></span>
-      <span class="power-track" aria-hidden="true"><span class="power-fill" style="width:${(info.progress * 100).toFixed(1)}%"></span></span>
-      <span class="power-xp">${info.maxed ? "MAX" : `${info.xpIntoLevel}/${info.xpForNextLevel}`}</span>
-      <span class="power-streak${streak ? "" : " is-cold"}" title="Day streak">🔥 ${streak}</span>`;
+    if (!parts) {
+      bar.innerHTML = `
+        <span class="power-rank"></span>
+        <span class="power-level">Lv <b></b></span>
+        <span class="power-track" aria-hidden="true"><span class="power-fill"></span></span>
+        <span class="power-xp"></span>
+        <span class="power-streak" title="Day streak"></span>`;
+      parts = {
+        rank: bar.querySelector(".power-rank"), level: bar.querySelector(".power-level b"),
+        fill: bar.querySelector(".power-fill"), xp: bar.querySelector(".power-xp"), streak: bar.querySelector(".power-streak"),
+      };
+    }
+    parts.rank.textContent = info.rank;
+    parts.level.textContent = info.level;
+    parts.xp.textContent = info.maxed ? "MAX" : `${info.xpIntoLevel}/${info.xpForNextLevel}`;
+    parts.streak.textContent = `🔥 ${streak}`;
+    parts.streak.classList.toggle("is-cold", !streak);
+    // On a level-up the bar restarts from empty instead of sliding backwards.
+    if (shownLevel !== null && info.level !== shownLevel) {
+      parts.fill.style.transition = "none";
+      parts.fill.style.transform = "scaleX(0)";
+      void parts.fill.offsetWidth;
+      parts.fill.style.transition = "";
+    }
+    shownLevel = info.level;
+    parts.fill.style.transform = `scaleX(${info.progress.toFixed(4)})`;
     bar.setAttribute("aria-label",
       `Power level: ${info.rank}, level ${info.level}. ` +
       (info.maxed ? "Max level. " : `${info.xpIntoLevel} of ${info.xpForNextLevel} XP to the next level. `) +
@@ -64,7 +87,8 @@
       pop.style.top = clamp(rect.top + 6, 60, window.innerHeight - 20) + "px";
       pop.style.animationDelay = i * 0.55 + "s"; // one after another, same spot, floating up
       document.body.appendChild(pop);
-      setTimeout(() => pop.remove(), 1600 + i * 550);
+      pop.addEventListener("animationend", () => pop.remove());
+      setTimeout(() => pop.remove(), 2600 + i * 550); // backup clean-up only
     });
   }
 
@@ -93,7 +117,7 @@
       bar.classList.remove("is-charged");
       void bar.offsetWidth; // restart the glow animation
       bar.classList.add("is-charged");
-      setTimeout(() => bar.classList.remove("is-charged"), 1800);
+      bar.addEventListener("animationend", () => bar.classList.remove("is-charged"), { once: true });
     }
     // Short buzz, only where supported and after the visitor has tapped the page (browsers require that).
     try {
@@ -107,7 +131,8 @@
       closed = true;
       document.removeEventListener("keydown", onKey);
       banner.classList.add("is-leaving");
-      setTimeout(() => banner.remove(), reduceMotion() ? 0 : 280);
+      if (reduceMotion()) banner.remove();
+      else banner.addEventListener("animationend", () => banner.remove(), { once: true });
     }
     function onKey(e) { if (e.key === "Escape" || e.key === "Enter" || e.key === " ") close(); }
     banner.addEventListener("click", close);
@@ -160,7 +185,7 @@
       <div class="profile-hero">
         <p class="profile-rank">${esc(info.rank)}</p>
         <p class="profile-level">Level <b>${info.level}</b></p>
-        <div class="profile-track" aria-hidden="true"><span style="width:${(info.progress * 100).toFixed(1)}%"></span></div>
+        <div class="profile-track" aria-hidden="true"><span style="transform:scaleX(${info.progress.toFixed(4)})"></span></div>
         <p class="profile-next">${info.maxed ? "Max level reached!" : `${info.xpIntoLevel} / ${info.xpForNextLevel} XP to Level ${info.level + 1}`}</p>
       </div>
 

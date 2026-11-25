@@ -11,6 +11,28 @@
  * concept page shows a "Test yourself" quiz automatically.
  */
 window.SuperScience = (function () {
+  /* ---------- Debug FPS counter: add ?fps=1 to the address to show it ---------- */
+  if (/[?&]fps=1\b/.test(location.search)) {
+    const meter = document.createElement("div");
+    meter.className = "fps-meter";
+    meter.setAttribute("aria-hidden", "true");
+    document.body.appendChild(meter);
+    let frames = 0, worst = 0, last = performance.now(), windowStart = last;
+    const tick = (now) => {
+      frames++;
+      worst = Math.max(worst, now - last);
+      last = now;
+      if (now - windowStart >= 500) {
+        meter.textContent = `${Math.round((frames * 1000) / (now - windowStart))} fps · worst ${Math.round(worst)} ms`;
+        meter.classList.toggle("bad", (frames * 1000) / (now - windowStart) < 55);
+        frames = 0; worst = 0; windowStart = now;
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+    document.addEventListener("visibilitychange", () => { last = windowStart = performance.now(); frames = 0; });
+  }
+
   const NS = "http://www.w3.org/2000/svg";
   const concepts = [];
   const questions = {}; // concept id -> list of questions
@@ -80,22 +102,25 @@ window.SuperScience = (function () {
   // Draw an arrow from (x1,y1) to (x2,y2) in screen coordinates.
   function arrow(parent, x1, y1, x2, y2, color, width) {
     const g = svgEl("g", {}, parent);
+    svgEl("line", { stroke: color, "stroke-width": width || 3, "stroke-linecap": "round" }, g);
+    svgEl("polygon", { fill: color }, g);
+    setArrow(g, x1, y1, x2, y2);
+    return g;
+  }
+
+  // Move an arrow made by arrow() to new end points (cheap: just updates attributes).
+  function setArrow(g, x1, y1, x2, y2) {
     const len = Math.hypot(x2 - x1, y2 - y1);
-    if (len < 1) return g;
+    g.style.display = len < 1 ? "none" : "";
+    if (len < 1) return;
     const head = Math.min(14, len * 0.45);
     const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+    const line = g.firstChild, tip = g.lastChild;
     // Stop the line short so it doesn't poke through the arrowhead.
-    svgEl("line", {
-      x1, y1, x2: x2 - ux * head * 0.8, y2: y2 - uy * head * 0.8,
-      stroke: color, "stroke-width": width || 3, "stroke-linecap": "round",
-    }, g);
-    const bx = x2 - ux * head, by = y2 - uy * head;
-    const px = -uy * head * 0.5, py = ux * head * 0.5;
-    svgEl("polygon", {
-      points: `${x2},${y2} ${bx + px},${by + py} ${bx - px},${by - py}`,
-      fill: color,
-    }, g);
-    return g;
+    line.setAttribute("x1", x1.toFixed(1)); line.setAttribute("y1", y1.toFixed(1));
+    line.setAttribute("x2", (x2 - ux * head * 0.8).toFixed(1)); line.setAttribute("y2", (y2 - uy * head * 0.8).toFixed(1));
+    const bx = x2 - ux * head, by = y2 - uy * head, px = -uy * head * 0.5, py = ux * head * 0.5;
+    tip.setAttribute("points", `${x2.toFixed(1)},${y2.toFixed(1)} ${(bx + px).toFixed(1)},${(by + py).toFixed(1)} ${(bx - px).toFixed(1)},${(by - py).toFixed(1)}`);
   }
 
   /* ---------- Helpers shared by the concepts ---------- */
@@ -108,20 +133,58 @@ window.SuperScience = (function () {
     return text.replace(/^-/, "−").replace(/^−(0\.?0*)$/, "$1"); // no "−0.00"
   }
 
-  // Animation loop: calls fn(dt) every frame with dt in seconds (max 0.05).
+  /* ---------- Smooth animation toolkit (see README "Animation rules") ---------- */
+
+  // Animation loop: calls fn(dt) once per screen refresh, with dt = real seconds since the
+  // last frame (so speed is the same on 60 Hz and 120 Hz screens), capped at 0.05 s.
+  // Browsers pause requestAnimationFrame in hidden tabs; when the tab comes back we restart
+  // the clock so the animation carries on from where it was instead of jumping.
   // Return false from fn to stop. Returns a stop() function.
   function loop(fn) {
     let last = null, id = 0, stopped = false;
+    const onVisible = () => { last = null; };
+    document.addEventListener("visibilitychange", onVisible);
+    const stop = () => { stopped = true; cancelAnimationFrame(id); document.removeEventListener("visibilitychange", onVisible); };
     function frame(now) {
       if (stopped) return;
       const dt = last === null ? 0 : Math.min(0.05, (now - last) / 1000);
       last = now;
-      if (fn(dt) === false) { stopped = true; return; }
+      if (fn(dt) === false) return stop();
       id = requestAnimationFrame(frame);
     }
     id = requestAnimationFrame(frame);
-    return () => { stopped = true; cancelAnimationFrame(id); };
+    return stop;
   }
+
+  // Physics with a FIXED time step (default 1/240 s) and an accumulator:
+  //   step(h)       advances the simulation by exactly h seconds (call it as often as needed)
+  //   render(alpha) draws; alpha (0..1) is how far we are between the last two steps, so
+  //                 drawing lerp(previous, current, alpha) gives silky motion at any frame rate.
+  // Return false from render to stop. Returns a stop() function.
+  function physicsLoop({ step, render, h = 1 / 240 }) {
+    let acc = 0;
+    return loop((dt) => {
+      acc += dt;
+      let n = 0;
+      while (acc >= h && n < 240) { step(h); acc -= h; n++; }
+      if (n === 240) acc = 0; // never try to "catch up" forever
+      return render(acc / h);
+    });
+  }
+
+  // Run fn at most once per screen refresh, with the latest arguments. Use it for slider
+  // "input" events: phones fire many per frame, but only the last one needs drawing.
+  function perFrame(fn) {
+    let id = 0, args = [];
+    const run = () => { id = 0; fn(...args); };
+    const wrapped = (...a) => { args = a; if (!id) id = requestAnimationFrame(run); };
+    wrapped.cancel = () => { cancelAnimationFrame(id); id = 0; };
+    return wrapped;
+  }
+
+  // Glide `current` towards `target`: covers ~63% of the gap every `tau` seconds (ease-out feel).
+  const smooth = (current, target, dt, tau) => target + (current - target) * Math.exp(-dt / Math.max(tau, 1e-6));
+  const lerp = (a, b, t) => a + (b - a) * t;
 
   // Row of live number tiles. items: [{ key, label, cls }]. Returns set(key, text).
   function stats(parent, items) {
@@ -189,6 +252,6 @@ window.SuperScience = (function () {
 
   return {
     concepts, register, questions, addQuestions, escapeHTML, svgEl, slider, watchWidth, arrow,
-    reducedMotion, fmt, loop, stats, select, fit, axes, pathD,
+    reducedMotion, fmt, loop, physicsLoop, perFrame, smooth, lerp, setArrow, stats, select, fit, axes, pathD,
   };
 })();
