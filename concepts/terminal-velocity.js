@@ -37,7 +37,7 @@
   const SS = window.SuperScience;
   const T_MAX = 30;      // seconds shown on the graph
   const SIM_SPEED = 2;   // simulated seconds per real second
-  const DT = 0.01;
+  const H_STEP = 1 / 240; // fixed physics step, in simulated seconds
 
   SS.register({
     id: "terminal-velocity",
@@ -77,47 +77,74 @@
       const btnJump = root.querySelector('[data-act="jump"]');
       const btnChute = root.querySelector('[data-act="chute"]');
 
-      let t = 0, v = 0, k = 0, chute = false, running = false, points = [], stopLoop = null;
+      // prevT/prevV = state one physics step ago, for drawing in between steps.
+      let t = 0, v = 0, prevT = 0, prevV = 0, k = 0, chute = false, running = false, stopLoop = null;
+      let a = null, pathD = "", lastPointT = 0, el = null, font = 12;
+      const txt = { w: root.querySelector('[data-f="w"]'), d: root.querySelector('[data-f="d"]') };
+      let shown = {}; // last text written to each stat (only touch the page when it changes)
+      const setOnce = (key, text) => { if (shown[key] !== text) { shown[key] = text; set(key, text); } };
+      const setTxt = (node, text) => { if (node.textContent !== text) node.textContent = text; };
 
       function reset() {
         if (stopLoop) { stopLoop(); stopLoop = null; }
-        t = 0; v = 0; k = Number(sK.value); chute = false; running = false; points = [{ t: 0, v: 0 }];
+        t = v = prevT = prevV = 0; k = Number(sK.value); chute = false; running = false;
         btnJump.disabled = false; btnChute.disabled = true;
         note.textContent = "Press Jump to start the fall.";
-        draw();
+        drawStatic();
+        drawDynamic(1);
       }
 
-      function draw() {
+      // Axes, grid and the terminal-speed line: drawn once per run (they don't move).
+      function drawStatic() {
         const m = Number(sM.value), k0 = Number(sK.value);
         const vt0 = terminalSpeed(m, k0);
         const yMax = Math.ceil((vt0 * 1.15) / 10) * 10;
         const step10 = yMax > 80 ? 20 : 10;
         const ticks = []; for (let y = 0; y <= yMax; y += step10) ticks.push(y);
-        const { W, H, font } = SS.fit(svg, 0.8, 0.5);
-        const a = SS.axes(svg, {
-          W, H, font, id: "terminal", x: [0, T_MAX], y: [0, yMax], xTicks: [0, 5, 10, 15, 20, 25, 30], yTicks: ticks,
+        const f = SS.fit(svg, 0.8, 0.5);
+        font = f.font;
+        a = SS.axes(svg, {
+          W: f.W, H: f.H, font, id: "terminal", x: [0, T_MAX], y: [0, yMax], xTicks: [0, 5, 10, 15, 20, 25, 30], yTicks: ticks,
           xFmt: (x) => x + " s", yLabel: "speed (m/s)",
         });
         const g = SS.svgEl("g", { "clip-path": a.clip }, svg);
-        const dashed = (speed, colour, label) => {
-          SS.svgEl("line", { x1: a.sx(0), y1: a.sy(speed), x2: a.sx(T_MAX), y2: a.sy(speed), stroke: colour, "stroke-width": 2, "stroke-dasharray": "7 6" }, g);
-          SS.svgEl("text", { x: a.sx(T_MAX) - 4, y: a.sy(speed) - 6, "text-anchor": "end", fill: colour, "font-size": font, "font-family": "system-ui, sans-serif" }, svg).textContent = label;
+        dashed(g, vt0, "rgba(255,255,255,0.7)", `terminal ${vt0.toFixed(1)} m/s`);
+        el = {
+          g,
+          path: SS.svgEl("path", { fill: "none", stroke: "#FFB300", "stroke-width": 3, "stroke-linejoin": "round" }, g),
+          dot: SS.svgEl("circle", { r: 6, fill: "#FFB300", stroke: "#000", "stroke-width": 2 }, svg),
         };
-        dashed(vt0, "rgba(255,255,255,0.7)", `terminal ${vt0.toFixed(1)} m/s`);
-        if (chute) dashed(terminalSpeed(m, k), "#4DD9FF", `with parachute ${terminalSpeed(m, k).toFixed(1)} m/s`);
-        SS.svgEl("path", { d: SS.pathD(points.map((p) => [a.sx(p.t), a.sy(p.v)])), fill: "none", stroke: "#FFB300", "stroke-width": 3, "stroke-linejoin": "round" }, g);
-        SS.svgEl("circle", { cx: a.sx(t), cy: a.sy(v), r: 6, fill: "#FFB300", stroke: "#000", "stroke-width": 2 }, svg);
+        if (chute) dashed(g, terminalSpeed(m, k), "#4DD9FF", `with parachute ${terminalSpeed(m, k).toFixed(1)} m/s`);
+        // The curve so far, rebuilt only here (e.g. after a resize); while falling it is extended.
+        pathD = `M${a.sx(0).toFixed(1)},${a.sy(0).toFixed(1)}`;
+        lastPointT = 0;
+        if (history.length) history.forEach(([ht, hv]) => { pathD += `L${a.sx(ht).toFixed(1)},${a.sy(hv).toFixed(1)}`; lastPointT = ht; });
+      }
+      let history = []; // [t, v] every 0.05 s, so a resize can redraw the curve
 
-        // Forces: weight (down) vs drag (up), on the same scale
-        const weight = m * G, drag = k * v * v, top = Math.max(weight, drag) * 1.05;
-        fillW.style.width = (weight / top) * 100 + "%";
-        fillD.style.width = (drag / top) * 100 + "%";
-        root.querySelector('[data-f="w"]').textContent = Math.round(weight) + " N";
-        root.querySelector('[data-f="d"]').textContent = Math.round(drag) + " N";
+      function dashed(g, speed, colour, label) {
+        SS.svgEl("line", { x1: a.sx(0), y1: a.sy(speed), x2: a.sx(T_MAX), y2: a.sy(speed), stroke: colour, "stroke-width": 2, "stroke-dasharray": "7 6" }, g);
+        SS.svgEl("text", { x: a.sx(T_MAX) - 4, y: a.sy(speed) - 6, "text-anchor": "end", fill: colour, "font-size": font, "font-family": "system-ui, sans-serif" }, svg).textContent = label;
+      }
 
-        set("v", v.toFixed(1) + " m/s");
-        set("vt", terminalSpeed(m, running || chute ? k : k0).toFixed(1) + " m/s");
-        set("t", t.toFixed(1) + " s");
+      // Every frame: extend the curve, move the dot, update bars and numbers.
+      function drawDynamic(alpha) {
+        const m = Number(sM.value);
+        const tt = SS.lerp(prevT, t, alpha), vv = SS.lerp(prevV, v, alpha);
+        const x = a.sx(tt).toFixed(1), y = a.sy(vv).toFixed(1);
+        el.path.setAttribute("d", pathD + `L${x},${y}`);
+        el.dot.setAttribute("cx", x);
+        el.dot.setAttribute("cy", y);
+
+        // Forces: weight (down) vs drag (up), on the same scale (transform = no page re-layout)
+        const weight = m * G, drag = k * vv * vv, top = Math.max(weight, drag) * 1.05;
+        fillW.style.transform = `scaleX(${(weight / top).toFixed(4)})`;
+        fillD.style.transform = `scaleX(${(drag / top).toFixed(4)})`;
+        setTxt(txt.w, Math.round(weight) + " N");
+        setTxt(txt.d, Math.round(drag) + " N");
+        setOnce("v", vv.toFixed(1) + " m/s");
+        setOnce("vt", terminalSpeed(m, running || chute ? k : Number(sK.value)).toFixed(1) + " m/s");
+        setOnce("t", tt.toFixed(1) + " s");
       }
 
       function jump() {
@@ -125,15 +152,29 @@
         running = true; btnJump.disabled = true; btnChute.disabled = false;
         note.textContent = "Falling…";
         const m = Number(sM.value);
-        stopLoop = SS.loop((dtReal) => {
-          const target = Math.min(T_MAX, t + dtReal * SIM_SPEED);
-          while (t < target - 1e-9) {
-            v = step(v, m, k, DT);
-            t += DT;
-            if (t - points[points.length - 1].t >= 0.1) points.push({ t, v });
-          }
-          draw();
-          if (t >= T_MAX - 1e-9) { running = false; btnChute.disabled = true; note.textContent = "Landed! (Well, the graph ran out.) Press Reset to go again."; return false; }
+        // Each fixed step is 1/240 s of falling; SIM_SPEED steps' worth run per real 1/240 s.
+        stopLoop = SS.physicsLoop({
+          h: H_STEP / SIM_SPEED,
+          step() {
+            if (t >= T_MAX) return;
+            prevT = t; prevV = v;
+            v = step(v, m, k, H_STEP);
+            t = Math.min(T_MAX, t + H_STEP);
+            if (t - lastPointT >= 0.05 - 1e-9) {
+              lastPointT = t;
+              history.push([t, v]);
+              pathD += `L${a.sx(t).toFixed(1)},${a.sy(v).toFixed(1)}`;
+            }
+          },
+          render(alpha) {
+            drawDynamic(t >= T_MAX ? 1 : alpha);
+            if (t >= T_MAX) {
+              running = false; btnChute.disabled = true;
+              note.textContent = "Landed! (Well, the graph ran out.) Press Reset to go again.";
+              stopLoop = null;
+              return false;
+            }
+          },
         });
       }
 
@@ -141,15 +182,19 @@
       btnChute.addEventListener("click", () => {
         if (chute || !running) return;
         chute = true; k *= PARACHUTE; btnChute.disabled = true;
+        dashed(el.g, terminalSpeed(Number(sM.value), k), "#4DD9FF", `with parachute ${terminalSpeed(Number(sM.value), k).toFixed(1)} m/s`);
         note.textContent = "Parachute open! Drag is now much bigger than weight, so the skydiver slows down.";
       });
-      root.querySelector('[data-act="reset"]').addEventListener("click", reset);
-      sM.addEventListener("input", reset);
-      sK.addEventListener("input", reset);
+      const fullReset = () => { history = []; shown = {}; reset(); };
+      root.querySelector('[data-act="reset"]').addEventListener("click", fullReset);
+      // Slider drags: reset at most once per frame
+      const onSlide = SS.perFrame(fullReset);
+      sM.addEventListener("input", onSlide);
+      sK.addEventListener("input", onSlide);
 
-      reset();
-      const unwatch = SS.watchWidth(svg.parentElement, draw);
-      return () => { if (stopLoop) stopLoop(); unwatch(); };
+      fullReset();
+      const unwatch = SS.watchWidth(svg.parentElement, () => { shown = {}; drawStatic(); drawDynamic(1); });
+      return () => { if (stopLoop) stopLoop(); onSlide.cancel(); unwatch(); };
     },
   });
 })();
