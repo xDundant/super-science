@@ -1,7 +1,7 @@
 /* ---------- Brand colours ---------- */
 :root {
-  --navy: #0B1026;
-  --navy-2: #131a3a;      /* slightly lighter panel */
+  --bg: #000000;
+  --panel: #121214;       /* slightly lighter panel (cards) */
   --amber: #FFB300;
   --cyan: #4DD9FF;
   --red: #FF4D5E;
@@ -15,7 +15,7 @@
 
 html, body {
   margin: 0;
-  background: var(--navy);
+  background: var(--bg);
   color: var(--white);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -60,7 +60,7 @@ body {
 }
 
 .concept {
-  background: var(--navy-2);
+  background: var(--panel);
   border: 1px solid rgba(77, 217, 255, 0.15);
   border-radius: 18px;
   padding: 18px 14px 20px;
@@ -98,7 +98,7 @@ body {
   width: 100%;
   border-radius: 12px;
   overflow: hidden;
-  background: var(--navy);
+  background: var(--bg);
 }
 #graph { display: block; width: 100%; height: auto; }
 
@@ -172,7 +172,7 @@ input[type="range"]::-webkit-slider-thumb {
   margin-top: -12px;
   border-radius: 50%;
   background: var(--accent);
-  border: 4px solid var(--navy);
+  border: 4px solid var(--bg);
   box-shadow: 0 0 0 2px var(--accent), 0 0 16px var(--accent-glow);
 }
 input[type="range"]::-moz-range-thumb {
@@ -180,7 +180,7 @@ input[type="range"]::-moz-range-thumb {
   height: 26px;
   border-radius: 50%;
   background: var(--accent);
-  border: 4px solid var(--navy);
+  border: 4px solid var(--bg);
   box-shadow: 0 0 0 2px var(--accent), 0 0 16px var(--accent-glow);
 }
 input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px var(--cyan), 0 0 18px rgba(77, 217, 255, 0.8); }
@@ -223,7 +223,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   gap: 8px;
   height: 100%;
   padding: 18px 18px 16px;
-  background: var(--navy-2);
+  background: var(--panel);
   border: 1px solid rgba(77, 217, 255, 0.15);
   border-radius: 18px;
   color: var(--white);
@@ -273,7 +273,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   margin: 14px 0 4px;
 }
 .stat {
-  background: var(--navy);
+  background: var(--bg);
   border: 1px solid rgba(77, 217, 255, 0.15);
   border-radius: 12px;
   padding: 10px 6px;
@@ -297,7 +297,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 .stat-wrap { white-space: normal; overflow: visible; font-size: clamp(0.85rem, 3.8vw, 1.3rem); }
 
 .slider-groups { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 8px; }
-.slider-group { background: rgba(11, 16, 38, 0.6); border-radius: 14px; padding: 10px 8px 6px; }
+.slider-group { background: rgba(0, 0, 0, 0.6); border-radius: 14px; padding: 10px 8px 6px; }
 .group-title { margin: 0; text-align: center; font-size: 1rem; font-weight: 800; }
 .group-cyan { color: var(--cyan); }
 .group-amber { color: var(--amber); }
@@ -313,7 +313,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   font-weight: 900;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--navy);
+  color: var(--bg);
   background: var(--amber);
   border: none;
   border-radius: 999px;
@@ -329,7 +329,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 /* ---------- Quiz: "Test yourself" ---------- */
 .quiz {
   margin-top: 16px;
-  background: var(--navy-2);
+  background: var(--panel);
   border: 1px solid rgba(77, 217, 255, 0.15);
   border-radius: 18px;
   padding: 18px 14px 20px;
@@ -364,7 +364,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   font-size: 1.02rem;
   text-align: left;
   color: var(--white);
-  background: var(--navy);
+  background: var(--bg);
   border: 2px solid rgba(77, 217, 255, 0.25);
   border-radius: 14px;
   cursor: pointer;
@@ -388,9 +388,9 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 }
 .quiz-text { font-family: inherit; }
 .quiz-option.is-correct { border-color: var(--green); background: rgba(46, 229, 157, 0.14); }
-.quiz-option.is-correct .quiz-letter { background: var(--green); border-color: var(--green); color: var(--navy); }
+.quiz-option.is-correct .quiz-letter { background: var(--green); border-color: var(--green); color: var(--bg); }
 .quiz-option.is-wrong { border-color: var(--red); background: rgba(255, 77, 94, 0.14); }
-.quiz-option.is-wrong .quiz-letter { background: var(--red); border-color: var(--red); color: var(--navy); }
+.quiz-option.is-wrong .quiz-letter { background: var(--red); border-color: var(--red); color: var(--bg); }
 .quiz-option.is-faded { opacity: 0.45; }
 
 .quiz-result { margin-top: 14px; padding: 12px 14px; border-radius: 14px; border-left: 4px solid; }
@@ -410,7 +410,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   font: inherit;
   font-size: 1.05rem;
   font-weight: 800;
-  color: var(--navy);
+  color: var(--bg);
   background: var(--amber);
   border: none;
   border-radius: 999px;

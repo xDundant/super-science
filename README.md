@@ -19,7 +19,7 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 | File | What it does |
 |---|---|
 | `index.html` | Page shell (header, `<main id="app">`, footer) and the list of scripts |
-| `style.css` | All styling (navy #0B1026, amber #FFB300, cyan, red, green) |
+| `style.css` | All styling (black #000000, amber #FFB300, cyan, red, green) |
 | `core.js` | Shared toolbox: concept list, question store, slider builder, SVG helpers |
 | `quiz.js` | The "Test yourself" quiz screen, plus `checkAnswer()`, the single function every answer goes through |
 | `concepts/<id>.js` | One file per concept: its maths, home-card details and drawing code |
