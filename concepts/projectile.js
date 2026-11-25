@@ -132,8 +132,9 @@
       }
 
       function stopAnimation() {
-        if (frame) cancelAnimationFrame(frame);
+        if (frame) frame(); // frame holds the stop() function of the running loop
         frame = null;
+        if (ball) for (const c of ball) c.style.opacity = "";
       }
 
       function launch() {
@@ -141,28 +142,43 @@
         const v = Number(speed.value), deg = Number(angle.value);
         const T = timeOfFlight(v, deg);
         if (T <= 0) return;
-        // Real time, but squeezed into 1.2–3.5 seconds so it never drags.
-        const duration = Math.min(3.5, Math.max(1.2, T)) * 1000;
-        const reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const start = performance.now();
+        const land = () => { placeBall(range(v, deg), 0); clock.textContent = "t = " + T.toFixed(2) + " s"; };
 
-        function tick(now) {
-          const p = reduceMotion ? 1 : Math.min(1, (now - start) / duration);
-          const t = p * T;
-          const pos = position(v, deg, t);
-          placeBall(p === 1 ? range(v, deg) : pos.x, p === 1 ? 0 : pos.y);
-          clock.textContent = "t = " + t.toFixed(2) + " s";
-          frame = p < 1 ? requestAnimationFrame(tick) : null;
+        if (SS.reducedMotion()) {
+          // Calm version: no sweeping flight. The ball fades out and back in where it lands.
+          let k = 0;
+          frame = SS.loop((dt) => {
+            k = Math.min(1, k + dt / 0.35);
+            if (k >= 0.5 && !land.done) { land(); land.done = true; }
+            for (const c of ball) c.style.opacity = String(Math.abs(1 - 2 * k));
+            if (k >= 1) { frame = null; return false; }
+          });
+          return;
         }
-        frame = requestAnimationFrame(tick);
+
+        // Real time, but squeezed into 1.2–3.5 seconds so it never drags. The position comes
+        // from the exact formula, so it only needs the elapsed time: we add up real frame
+        // times (capped per frame), so switching tabs mid-flight pauses instead of skipping ahead.
+        const duration = Math.min(3.5, Math.max(1.2, T));
+        let elapsed = 0;
+        frame = SS.loop((dt) => {
+          elapsed = Math.min(duration, elapsed + dt);
+          const t = (elapsed / duration) * T;
+          if (elapsed >= duration) { land(); frame = null; return false; }
+          const pos = position(v, deg, t);
+          placeBall(pos.x, pos.y);
+          clock.textContent = "t = " + t.toFixed(2) + " s";
+        });
       }
 
-      angle.addEventListener("input", draw);
-      speed.addEventListener("input", draw);
+      // Slider drags: redraw at most once per frame
+      const onSlide = SS.perFrame(draw);
+      angle.addEventListener("input", onSlide);
+      speed.addEventListener("input", onSlide);
       button.addEventListener("click", launch);
       draw();
       const unwatch = SS.watchWidth(wrap, draw);
-      return () => { stopAnimation(); unwatch(); };
+      return () => { stopAnimation(); onSlide.cancel(); unwatch(); };
     },
   });
 })();
