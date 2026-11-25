@@ -40,7 +40,9 @@ for (const [concept, bank] of Object.entries(BANKS)) {
     // No duplicate options (ignoring spaces/case), and no two numbers that are equal (e.g. "5" vs "5.0")
     const norm = q.options.map((o) => o.replace(/\s+/g, "").toLowerCase());
     assert.strictEqual(new Set(norm).size, 4, `${where}: duplicate options ${JSON.stringify(q.options)}`);
-    const nums = q.options.map((o) => o.trim()).filter((o) => /^[−-]?\d/.test(o)).map(parseFloat);
+    // Only options that are ONE number (with an optional unit), e.g. "16 N", "62.6 m/s", "5"
+    const single = (o) => (o.match(/\d+(\.\d+)?/g) || []).length === 1 && /^[−-]?\d/.test(o.trim());
+    const nums = q.options.filter(single).map((o) => parseFloat(o.trim().replace("−", "-")));
     assert.strictEqual(new Set(nums).size, nums.length, `${where}: two options are the same number`);
 
     // Exactly one correct option: only the marked index passes the answer check

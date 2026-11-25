@@ -759,6 +759,49 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 .warn { text-align: center; color: var(--red); font-weight: 800; margin: 10px 0 0; min-height: 1.4em; }
 .ok { text-align: center; color: var(--green); font-weight: 800; margin: 10px 0 0; min-height: 1.4em; }
 .caption a { color: var(--cyan); }
+
+/* Atom builder */
+.atom-top { display: grid; grid-template-columns: 1fr; gap: 12px; align-items: center; }
+.element-card {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  margin: 0 auto;
+  border-radius: 16px;
+  background: var(--bg);
+  border: 2px solid var(--amber);
+  box-shadow: 0 0 18px rgba(255, 179, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.el-z { position: absolute; top: 8px; left: 12px; font-weight: 800; color: var(--red); }
+.el-a { position: absolute; top: 8px; right: 12px; font-weight: 800; color: var(--muted); }
+.el-symbol { font-size: 3rem; font-weight: 900; color: var(--amber); line-height: 1; }
+.el-name { margin-top: 6px; font-size: 0.95rem; font-weight: 700; }
+.atom-pic { width: 100%; max-width: 360px; }
+.counters { display: grid; gap: 10px; margin: 14px 0 0; }
+.counter { display: grid; grid-template-columns: 1fr 52px 3em 52px; align-items: center; gap: 10px; }
+.counter-label { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.dot { display: inline-block; width: 14px; height: 14px; border-radius: 50%; }
+.counter-btn {
+  width: 52px;
+  height: 52px;
+  font: inherit;
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--bg);
+  background: var(--amber);
+  border: none;
+  border-radius: 14px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.counter-btn:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.counter-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.counter-val { text-align: center; font-size: 1.4rem; font-weight: 900; font-variant-numeric: tabular-nums; }
 .force-bars { display: grid; gap: 8px; margin: 12px 2px 0; }
 .force-bar { display: grid; grid-template-columns: 5.2em 1fr 4.6em; align-items: center; gap: 10px; font-size: 0.9rem; }
 .fb-label { color: var(--muted); }
@@ -799,6 +842,8 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
   .stats--4 { grid-template-columns: repeat(4, 1fr); }
   .controls-2 { grid-template-columns: 1fr 1fr; gap: 16px; }
   .graph-pair { grid-template-columns: 1fr 1fr; }
+  .atom-top { grid-template-columns: 180px 1fr; }
+  .counters { max-width: 460px; margin-left: auto; margin-right: auto; }
   .stat-label { font-size: 0.85rem; }
 }
 
