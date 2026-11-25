@@ -31,4 +31,31 @@ assert.strictEqual(polynomialLabel(3), "x − x³/3! + x⁵/5!");
 assert.ok(polynomialLabel(10).endsWith("− x¹⁹/19!"));
 console.log("label n=10:", polynomialLabel(10));
 
+// Smooth morphing: fractional terms
+const { taylorSinBlend } = require("../concepts/taylor.js");
+for (let n = 1; n <= 10; n++) for (let x = -6.2; x <= 6.2; x += 0.31) {
+  assert.ok(Math.abs(taylorSinBlend(x, n) - taylorSin(x, n)) < 1e-12, `whole numbers match at n=${n}`);
+}
+// Halfway between 2 and 3 terms is exactly halfway between the two polynomials
+for (let x = -6; x <= 6; x += 0.5) {
+  const mid = (taylorSin(x, 2) + taylorSin(x, 3)) / 2;
+  assert.ok(Math.abs(taylorSinBlend(x, 2.5) - mid) < 1e-12, `n=2.5 at x=${x}`);
+}
+// No jumps: a tiny slider move makes a tiny change everywhere on the graph
+// (measured on what's visible: the graph shows y from −3 to 3)
+const visible = (y) => Math.max(-3, Math.min(3, y));
+const jump = (step) => {
+  let biggest = 0;
+  for (let n = 1; n + step <= 10; n += 0.01) for (let x = -2 * Math.PI; x <= 2 * Math.PI; x += 0.05) {
+    biggest = Math.max(biggest, Math.abs(visible(taylorSinBlend(x, n + step)) - visible(taylorSinBlend(x, n))));
+  }
+  return biggest;
+};
+const j1 = jump(0.01), j2 = jump(0.005), j3 = jump(0.001);
+console.log(`Largest visible change: ${j1.toFixed(3)} for a 0.01 step, ${j3.toFixed(4)} for a 0.001 step (graph height is 6)`);
+// Continuous = smaller slider steps give proportionally smaller changes (no sudden jumps).
+assert.ok(j2 < j1 * 0.6 && j3 < j1 * 0.15, "changes shrink with the step: continuous, no jumps");
+// And whole-number steps (the old behaviour) were far bigger jumps than a 0.01 step
+assert.ok(jump(1) > 5 * j1);
+
 console.log("All maths tests passed ✅");
