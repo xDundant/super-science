@@ -102,11 +102,15 @@
 
       function fresh() { denatured = false; draw(); }
       sel.addEventListener("change", fresh);
-      sT.addEventListener("input", draw);
-      sP.addEventListener("input", draw);
+      // Slider drags: redraw at most once per frame. The "too hot" check runs on EVERY
+      // event, so a quick drag past 50 °C and back still denatures the enzyme.
+      const onSlide = SS.perFrame(draw);
+      sT.addEventListener("input", () => { if (Number(sT.value) >= denatureTemp(sel.value)) denatured = true; onSlide(); });
+      sP.addEventListener("input", onSlide);
       root.querySelector('[data-act="fresh"]').addEventListener("click", fresh);
       draw();
-      return SS.watchWidth(gT.parentElement, draw);
+      const unwatch = SS.watchWidth(gT.parentElement, draw);
+      return () => { onSlide.cancel(); unwatch(); };
     },
   });
 })();
