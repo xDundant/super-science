@@ -21,7 +21,7 @@
 <body>
   <header class="site-header">
     <h1 class="logo"><a href="#" aria-label="Super Science home">SUPER <span>SCIENCE</span></a></h1>
-    <!-- Future: power level / points badge goes here -->
+    <a class="power" id="power" href="#profile" aria-label="Power level. Open profile."></a>
   </header>
 
   <main class="concepts" id="app">
@@ -33,6 +33,11 @@
   </footer>
 
   <script src="core.js"></script>
+  <!-- XP / Power Level: numbers, rules, saving, then the on-screen parts. -->
+  <script src="xp/config.js"></script>
+  <script src="xp/engine.js"></script>
+  <script src="xp/storage.js"></script>
+  <script src="xp/ui.js"></script>
   <script src="quiz.js"></script>
   <!-- Concepts: one file each. Cards appear on the home screen in this order. -->
   <script src="concepts/taylor.js"></script>

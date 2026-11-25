@@ -100,6 +100,13 @@
       results.push(result.correct);
       if (result.correct) score++;
 
+      // XP: pays only the first time this question is ever answered correctly.
+      const chosenBtn = body.querySelector(`.quiz-option[data-k="${chosen}"]`);
+      const xp = result.correct && SS.xp ? SS.xp.award({ type: "correctAnswer", questionId: q.id }, chosenBtn) : null;
+      const xpNote = !xp ? "" : xp.total > 0
+        ? `<p class="quiz-xp gain">+${xp.total} XP</p>`
+        : `<p class="quiz-xp">XP already collected for this question.</p>`;
+
       body.querySelectorAll(".quiz-option").forEach((btn, k) => {
         btn.disabled = true;
         if (k === result.correctIndex) btn.classList.add("is-correct");
@@ -114,6 +121,7 @@
         <div class="quiz-result ${result.correct ? "right" : "wrong"}">
           <p class="quiz-verdict">${result.correct ? "✓ Correct!" : "✗ Not quite."}</p>
           <p class="quiz-explain">${esc(result.explanation)}</p>
+          ${xpNote}
         </div>
         <button type="button" class="btn btn-next">${last ? "See my score" : "Next →"}</button>`;
 
@@ -143,6 +151,13 @@
           <p class="quiz-message">${esc(scoreMessage(score, order.length))}</p>
           <button type="button" class="btn btn-retry">Try again</button>
         </div>`;
+      // XP: perfect-score bonus, once per concept.
+      if (score === order.length && SS.xp) {
+        const xp = SS.xp.award({ type: "perfectScore", conceptId }, body.querySelector(".quiz-score"));
+        body.querySelector(".quiz-message").insertAdjacentHTML("afterend", xp.total > 0
+          ? `<p class="quiz-xp gain">Perfect bonus: +${xp.total} XP</p>`
+          : `<p class="quiz-xp">Perfect bonus already collected.</p>`);
+      }
       const retry = body.querySelector(".btn-retry");
       retry.addEventListener("click", () => {
         start();

@@ -13,7 +13,8 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 - **"Test yourself" quiz:** under each concept, 5 multiple-choice questions, one at a time.
   - After each answer it shows green (right) or red (wrong) with a short explanation, then a Next button.
   - At the end it shows your score with a Try again button that reshuffles the order.
-  - Scores last for the current visit only; nothing is saved.
+  - The quiz score itself lasts for the current visit only, but the XP you earn is saved (see below).
+- **Power Level / XP:** a bar in the header on every page shows your rank, level, XP progress and 🔥 day streak. Tap it to open your **Profile** (`#profile`).
 
 ## Files
 | File | What it does |
@@ -22,6 +23,10 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 | `style.css` | All styling (black #000000, amber #FFB300, cyan, red, green) |
 | `core.js` | Shared toolbox: concept list, question store, slider builder, SVG helpers |
 | `quiz.js` | The "Test yourself" quiz screen, plus `checkAnswer()`, the single function every answer goes through |
+| `xp/config.js` | **All XP numbers**: rewards, streak bonus, level curve, rank names, auras |
+| `xp/engine.js` | XP rules: levels, ranks, streaks, anti-farming (no screen code; tested) |
+| `xp/storage.js` | **All saving code** (localStorage). Swap this file for a real backend later |
+| `xp/ui.js` | Power Level bar, "+10 XP" popups, POWER UP! banner, Profile screen |
 | `concepts/<id>.js` | One file per concept: its maths, home-card details and drawing code |
 | `questions/<id>.js` | One file per concept: its quiz questions as plain data |
 | `app.js` | Home screen and `#hash` routing (adds the quiz under each concept automatically) |
@@ -57,6 +62,7 @@ Change the last line to `addQuestions("waves", QUESTIONS)`.
 **3. Register the scripts in `index.html`:**
 - Add `<script src="concepts/waves.js"></script>` after the other concept scripts. The order of these lines is the order of the home cards.
 - Add `<script src="questions/waves.js"></script>` after the other question scripts.
+- XP for the new concept and its questions works automatically, with nothing else to register.
 
 Both must come before `app.js`.
 
@@ -77,8 +83,29 @@ node tests/run-all.js
 ```
 The question tests check that every question has exactly 4 different options, one correct answer and an explanation. They also **recalculate every numeric answer** with the same maths code the graphs use, and fail if the marked answer is wrong.
 
-## Adding points / power levels later
-Every answer goes through `checkAnswer()` in `quiz.js`, so that's the one place to award points. It isn't built yet.
+## How XP works
+| You do this | You get | How often |
+|---|---|---|
+| Open a concept for the first time | +10 XP | Once per concept, ever |
+| Get a question right for the first time | +10 XP | Once per question, ever |
+| Score 5/5 on a concept's questions | +25 XP | Once per concept, ever |
+| Earn any XP on a new day (daily streak) | +5 XP, then +1 more for each day in a row, max +15 | Once per day |
+
+- **Anti-farming:** everything pays once. Retaking a question you already got right shows "XP already collected" and earns 0. A day with no *new* XP doesn't earn a streak bonus.
+- **Streak:** counts the days in a row on which you earned XP. Miss a day and it starts again at 1 (+5).
+- **Levels:** Level 2 needs 50 XP. Each level after that needs 20 XP more than the one before (50, 70, 90, 110…). So Level 5 is at 320 XP and Level 10 at 1,170 XP.
+- **Ranks:** a new rank every 5 levels: Spark (1–4), Charged (5–9), Surge (10–14), Overdrive (15–19), Supernova (20–24), Singularity (25+).
+- **Auras:** cosmetic glow colours for the header bar. Amber from the start, then Cyan at level 5, Red at 10 and White-gold at 15. Pick one on the Profile screen; locked ones are greyed out.
+- **Level up:** a "POWER UP!" banner, an amber glow, and a short vibration on phones that support it. With "reduce motion" turned on in the device settings, these become simple fades, with no movement or pulsing.
+- **Saved** on the device in `localStorage` under the key `superscience.progress`, as `{ version: 1, xp, level, streak, lastActiveDate, completedQuestions, seenConcepts, perfectConcepts, unlockedAuras, chosenAura }`. If the browser blocks storage, XP still works for that visit and the Profile screen shows a warning. **Reset progress** (with a confirm step) is at the bottom of the Profile screen.
+
+### Changing the numbers
+Edit **`xp/config.js`**. Every reward, the streak bonus and cap, the level curve (`firstLevelUp`, `extraPerLevel`), the rank names and the aura unlock levels are there. Then run the tests, bump `CACHE_VERSION` in `sw.js`, and push.
+
+> With today's 3 concepts there are 255 XP of one-off rewards. That's enough for about Level 4 in one go; Level 5 then comes from a few days of streak bonuses. Each new concept adds 85 XP.
+
+### Earning XP from new code
+Call `SuperScience.xp.award({ type: "openConcept", conceptId })`, `{ type: "correctAnswer", questionId }` or `{ type: "perfectScore", conceptId }`. The optional second argument is the element the "+XP" popup floats from. The rules live in `award()` in `xp/engine.js`. Quiz answers are checked by `checkAnswer()` in `quiz.js`, and then the quiz calls `SuperScience.xp.award`.
 
 ## Updating the live site
 Push to `main` and Vercel redeploys automatically. **Always bump `CACHE_VERSION` in `sw.js`** (e.g. `v3` → `v4`) when you change files, so installed phones fetch the new version.

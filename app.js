@@ -30,12 +30,14 @@
       </ul>`;
   }
 
-  function renderConcept(concept) {
-    document.title = `${concept.title} · ${SITE_TITLE}`;
+  // A page with a back link and a titled card. fill(section) adds the content
+  // and may return a cleanup function.
+  function renderPage(title, fill) {
+    document.title = `${title} · ${SITE_TITLE}`;
     app.innerHTML = `
       <a class="back" href="#">← All concepts</a>
       <section class="concept" aria-labelledby="concept-title">
-        <h2 class="concept-title" id="concept-title" tabindex="-1">${escapeHTML(concept.title)}</h2>
+        <h2 class="concept-title" id="concept-title" tabindex="-1">${escapeHTML(title)}</h2>
       </section>`;
 
     app.querySelector(".back").addEventListener("click", (e) => {
@@ -44,25 +46,37 @@
     });
 
     const section = app.querySelector(".concept");
-    const result = concept.render(section);
+    const result = fill(section);
     cleanup = typeof result === "function" ? result : null;
-    SS.renderQuiz(app, concept.id); // "Test yourself" card, if this concept has questions
     section.querySelector(".concept-title").focus({ preventScroll: true });
+  }
+
+  function renderConcept(concept) {
+    renderPage(concept.title, (section) => {
+      const undo = concept.render(section);
+      SS.renderQuiz(app, concept.id); // "Test yourself" card, if this concept has questions
+      if (SS.xp) SS.xp.award({ type: "openConcept", conceptId: concept.id }, section.querySelector(".concept-title"));
+      return undo;
+    });
   }
 
   function route() {
     if (cleanup) { cleanup(); cleanup = null; }
+    window.scrollTo(0, 0); // before drawing, so XP popups appear in the right place
     const id = decodeURIComponent(location.hash.slice(1));
     const concept = SS.concepts.find((c) => c.id === id);
     if (concept) {
       cameFromHome = current === "home";
       renderConcept(concept);
       current = concept.id;
+    } else if (id === "profile" && SS.xp) {
+      cameFromHome = current === "home";
+      renderPage("Your Power Level", (section) => SS.xp.renderProfile(section));
+      current = "profile";
     } else {
       renderHome();
       current = "home";
     }
-    window.scrollTo(0, 0);
   }
 
   window.addEventListener("hashchange", route);
