@@ -781,6 +781,7 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 .el-symbol { font-size: 3rem; font-weight: 900; color: var(--amber); line-height: 1; }
 .el-name { margin-top: 6px; font-size: 0.95rem; font-weight: 700; }
 .atom-pic { width: 100%; max-width: 360px; }
+.punnett-wrap { max-width: 400px; margin-top: 12px; }
 .counters { display: grid; gap: 10px; margin: 14px 0 0; }
 .counter { display: grid; grid-template-columns: 1fr 52px 3em 52px; align-items: center; gap: 10px; }
 .counter-label { display: flex; align-items: center; gap: 8px; font-weight: 700; }

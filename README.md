@@ -8,8 +8,22 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 | `#taylor` | Taylor series of sin(x): add terms and watch the polynomial hug sin(x) | Maths |
 | `#vectors` | Adding vectors tip to tail, with live magnitude and angle of A + B | Maths |
 | `#projectile` | Projectile motion: angle and speed sliders, a Launch animation, and live range, max height and time of flight | Physics |
+| `#euler-e` | Euler's number e from compound interest: (1 + 1/n)ⁿ creeping up to 2.71828 | Maths |
+| `#euler-identity` | Euler's identity: e^(iθ) on the unit circle, "Go to π" gives e^(iπ) + 1 = 0, × i turns 90° | Maths |
+| `#integration` | Integration as area: left strips under v = t² from 0 to 3 s converge to 9 m | Maths |
+| `#centripetal` | Centripetal force F = mv²/r: orbiting ball, Release to fly off along the tangent | Physics |
+| `#terminal-velocity` | Skydiver with drag kv²: speed climbs to √(mg/k); parachute multiplies k by 10 | Physics |
+| `#pendulum` | Real pendulum (numerical) vs the small-angle formula T = 2π√(L/g) | Physics |
+| `#ph` | pH 0–14: [H⁺], [OH⁻], indicator colour and everyday examples | Chemistry |
+| `#gas` | Particles in a box: P = nRT/V with temperature and volume sliders | Chemistry |
+| `#atom` | Atom builder for elements 1–20: mass number, charge, ions, isotopes, 2-8-8-2 shells | Chemistry |
+| `#natural-selection` | Light/dark bugs, predator pressure, generations and a % dark chart (seeded random) | Biology |
+| `#punnett` | Punnett square for pea flower colour (B purple, b white) | Biology |
+| `#enzymes` | Enzyme activity vs temperature and pH (amylase, pepsin), with permanent denaturing | Biology |
 
-- **Home screen:** a grid of cards. Each concept has its own link (e.g. `yoursite.vercel.app/#vectors`), and the browser back button works.
+> **Simplified models:** the natural-selection simulation, the enzyme activity curves and the pH indicator colours are deliberately simple teaching models, not real lab data. The everyday pH values are typical approximate values (real ones vary).
+
+- **Home screen:** a grid of cards with **subject filter chips** (All / Maths / Physics / Chemistry / Biology). Each concept has its own link (e.g. `yoursite.vercel.app/#vectors`), and the browser back button works.
 - **"Test yourself" quiz:** under each concept, 5 multiple-choice questions, one at a time.
   - After each answer it shows green (right) or red (wrong) with a short explanation, then a Next button.
   - At the end it shows your score with a Try again button that reshuffles the order.
@@ -21,7 +35,7 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 |---|---|
 | `index.html` | Page shell (header, `<main id="app">`, footer) and the list of scripts |
 | `style.css` | All styling (black #000000, amber #FFB300, cyan, red, green) |
-| `core.js` | Shared toolbox: concept list, question store, slider builder, SVG helpers |
+| `core.js` | Shared toolbox: concept list, question store, slider, dropdown, number tiles, graph axes, animation loop |
 | `quiz.js` | The "Test yourself" quiz screen, plus `checkAnswer()`, the single function every answer goes through |
 | `xp/config.js` | **All XP numbers**: rewards, streak bonus, level curve, rank names, auras |
 | `xp/engine.js` | XP rules: levels, ranks, streaks, anti-farming (no screen code; tested) |
@@ -32,7 +46,8 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 | `questions/<id>.js` | One file per concept: its quiz questions as plain data |
 | `app.js` | Home screen and `#hash` routing (adds the quiz under each concept automatically) |
 | `manifest.json`, `sw.js`, `icons/` | Make it installable and work offline |
-| `tests/` | Maths, physics and quiz-question checks |
+| `tests/*.test.js` | All tests (run together by `tests/run-all.js`) |
+| `tests/checks/<id>.js` | One file per concept: **calculates** the right answer to each of its quiz questions |
 
 ## How to add a new concept
 Use an id that is short, lowercase, with no spaces, e.g. `waves`. It becomes the link `#waves`.
@@ -41,12 +56,12 @@ Use an id that is short, lowercase, with no spaces, e.g. `waves`. It becomes the
 - The maths functions at the top. Keep the `module.exports` line so tests can use them.
 - The **home card**, which is the `SS.register({ ... })` block:
   - `id: "waves"`
-  - `title`: the card and page heading
   - `description`: one line for the card
-  - `tag: "Maths"` or `"Physics"`
+  - `tag`: `"Maths"`, `"Physics"`, `"Chemistry"` or `"Biology"` (this also puts it under that filter chip)
+  - `title`: write it as a curious question ending in "?", e.g. "Why don't skydivers keep speeding up?"
 
   The home card is created automatically from these details. There is no separate card list to edit.
-- `render(root)`: draws the interactive part into `root`. Return a cleanup function if you start timers or animations.
+- `render(root)`: draws the interactive part into `root`. Return a cleanup function if you start timers or animations. Use the helpers in `core.js` to stay consistent: `SS.slider`, `SS.select`, `SS.stats` (live number tiles), `SS.fit` + `SS.axes` (graphs) and `SS.loop` (animation).
 
 **2. Create `questions/waves.js`.** Copy an existing questions file and write 5 questions:
 ```js
@@ -70,13 +85,12 @@ Both must come before `app.js`.
 **4. Add both files to `sw.js`.** Put `"concepts/waves.js"` and `"questions/waves.js"` in `FILES`, then bump `CACHE_VERSION`.
 
 **5. Add tests:**
-- Create `tests/waves.test.js` for the concept's maths, and add it to `tests/run-all.js`.
-- In `tests/questions.test.js`:
-  - Add `waves: require("../questions/waves.js")` to `BANKS`.
-  - For every question whose answer is a number, add a check to `CHECKS` that **calculates** the answer with the concept's own code.
-  - List any idea-only questions in `CONCEPTUAL`.
+- Create `tests/checks/waves.js`. For every question whose answer is a number, add a check that **calculates** the answer with the concept's own code and returns the option text that must be marked correct. List idea-only questions under `conceptual`. Copy `tests/checks/pendulum.js` as a template.
+- Create `tests/waves.test.js` for the concept's own maths. It runs automatically, with no list to update.
 
-  The test fails if a question has neither.
+`node tests/run-all.js` will fail if any of these are missing, if the concept isn't in `index.html` or `sw.js`, or if a marked answer doesn't match the maths.
+
+**Files to create, in short:** `concepts/waves.js`, `questions/waves.js`, `tests/checks/waves.js`, `tests/waves.test.js`. **Files to edit:** `index.html` (2 script lines; this registers the home card) and `sw.js` (2 file names + bump `CACHE_VERSION`).
 
 ## Running the tests
 ```
@@ -120,7 +134,7 @@ All sounds are made in code with the Web Audio API in **`sound/sfx.js`**. There 
 ### Changing the numbers
 Edit **`xp/config.js`**. Every reward, the streak bonus and cap, the level curve (`firstLevelUp`, `extraPerLevel`), the rank names and the aura unlock levels are there. Then run the tests, bump `CACHE_VERSION` in `sw.js`, and push.
 
-> With today's 3 concepts there are 255 XP of one-off rewards. That's enough for about Level 4 in one go; Level 5 then comes from a few days of streak bonuses. Each new concept adds 85 XP.
+> With today's 15 concepts there are 1,275 XP of one-off rewards (85 XP per concept: 10 for opening it, 50 for its 5 questions, 25 for a perfect score). That's enough for Level 10 (1,170 XP) without any streak bonuses, so the cyan (Level 5) and red (Level 10) auras are both reachable. White-gold (Level 15) needs more concepts or streak days.
 
 ### Earning XP from new code
 Call `SuperScience.xp.award({ type: "openConcept", conceptId })`, `{ type: "correctAnswer", questionId }` or `{ type: "perfectScore", conceptId }`. The optional second argument is the element the "+XP" popup floats from. The rules live in `award()` in `xp/engine.js`. Quiz answers are checked by `checkAnswer()` in `quiz.js`, and then the quiz calls `SuperScience.xp.award`.

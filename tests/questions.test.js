@@ -38,7 +38,8 @@ for (const [concept, bank] of Object.entries(BANKS)) {
     assert.ok(Number.isInteger(q.correct) && q.correct >= 0 && q.correct <= 3, `${where}: correct must be 0, 1, 2 or 3`);
 
     // No duplicate options (ignoring spaces/case), and no two numbers that are equal (e.g. "5" vs "5.0")
-    const norm = q.options.map((o) => o.replace(/\s+/g, "").toLowerCase());
+    // Ignore spaces (capitals DO count: in genetics BB, Bb and bb are different answers)
+    const norm = q.options.map((o) => o.replace(/\s+/g, ""));
     assert.strictEqual(new Set(norm).size, 4, `${where}: duplicate options ${JSON.stringify(q.options)}`);
     // Only options that are ONE number (with an optional unit), e.g. "16 N", "62.6 m/s", "5"
     const single = (o) => (o.match(/\d+(\.\d+)?/g) || []).length === 1 && /^[−-]?\d/.test(o.trim());

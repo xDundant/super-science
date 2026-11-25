@@ -1,7 +1,7 @@
 /* Super Science service worker: makes the app work offline.
  * When you change any file, bump CACHE_VERSION so phones get the new version.
  */
-const CACHE_VERSION = "super-science-v9";
+const CACHE_VERSION = "super-science-v10";
 const FILES = [
   "./",
   "index.html",
@@ -20,6 +20,9 @@ const FILES = [
   "concepts/ph.js",
   "concepts/gas.js",
   "concepts/atom.js",
+  "concepts/natural-selection.js",
+  "concepts/punnett.js",
+  "concepts/enzymes.js",
   "xp/config.js",
   "xp/engine.js",
   "xp/storage.js",
@@ -37,6 +40,9 @@ const FILES = [
   "questions/ph.js",
   "questions/gas.js",
   "questions/atom.js",
+  "questions/natural-selection.js",
+  "questions/punnett.js",
+  "questions/enzymes.js",
   "app.js",
   "manifest.json",
   "icons/icon.svg",
