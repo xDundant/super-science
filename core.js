@@ -6,13 +6,25 @@
  *   description  one line for the home card
  *   tag          "Maths" or "Physics"
  *   render(el)   draws the concept into el; may return a cleanup function
+ *
+ * A questions file calls SuperScience.addQuestions("vectors", [...]) and the
+ * concept page shows a "Test yourself" quiz automatically.
  */
 window.SuperScience = (function () {
   const NS = "http://www.w3.org/2000/svg";
   const concepts = [];
+  const questions = {}; // concept id -> list of questions
 
   function register(concept) {
     concepts.push(concept);
+  }
+
+  function addQuestions(conceptId, list) {
+    questions[conceptId] = list;
+  }
+
+  function escapeHTML(text) {
+    return String(text).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
   // Create an SVG element with attributes, optionally adding it to a parent.
@@ -86,5 +98,5 @@ window.SuperScience = (function () {
     return g;
   }
 
-  return { concepts, register, svgEl, slider, watchWidth, arrow };
+  return { concepts, register, questions, addQuestions, escapeHTML, svgEl, slider, watchWidth, arrow };
 })();

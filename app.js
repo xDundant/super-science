@@ -46,6 +46,7 @@
     const section = app.querySelector(".concept");
     const result = concept.render(section);
     cleanup = typeof result === "function" ? result : null;
+    SS.renderQuiz(app, concept.id); // "Test yourself" card, if this concept has questions
     section.querySelector(".concept-title").focus({ preventScroll: true });
   }
 
