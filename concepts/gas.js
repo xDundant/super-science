@@ -60,7 +60,9 @@
         }
         SS.svgEl("rect", { class: "gas-box", x: box.x, y: box.y, width: 10, height: box.h, fill: "rgba(255,255,255,0.03)", stroke: "#FFFFFF", "stroke-width": 3, rx: 4 }, svg);
         piston = SS.svgEl("rect", { x: 0, y: box.y - 6, width: 10, height: box.h + 12, rx: 3, fill: "#4DD9FF" }, svg);
-        dots = parts.map(() => SS.svgEl("circle", { r: DOT }, svg));
+        // All particles are drawn as ONE path (one circle shape per particle), so each frame
+        // updates a single attribute instead of 80 separate positions.
+        dots = SS.svgEl("path", {}, svg);
         layout();
       }
 
@@ -75,36 +77,55 @@
         set("v", V + " L");
       }
 
-      const stop = SS.loop((dt) => {
-        const T = Number(sT.value), colour = heatColour(T);
-        // pixels per second: about a third of the picture width at 300 K
-        const speed = W * 0.35 * speedFactor(T) * dt;
-        clock += dt;
-        parts.forEach((p, i) => {
-          // positions are stored in pixels inside the box
-          if (p.px === undefined) { p.px = DOT + p.x * (box.w - 2 * DOT); p.py = DOT + p.y * (box.h - 2 * DOT); }
-          p.px += p.vx * speed; p.py += p.vy * speed;
+      // Fixed 1/240 s physics steps. Each particle remembers where it was one step ago
+      // (ox, oy) so drawing can sit smoothly in between.
+      let lastColour = "", lastNote = "";
+      const stop = SS.physicsLoop({
+        step(h) {
+          const T = Number(sT.value);
+          // pixels per second: about a third of the picture width at 300 K
+          const speed = W * 0.35 * speedFactor(T) * h;
+          clock += h;
           const maxX = box.w - DOT, maxY = box.h - DOT;
-          if (p.px < DOT) { p.px = DOT; p.vx = Math.abs(p.vx); hits.push(clock); }
-          if (p.px > maxX) { p.px = maxX; p.vx = -Math.abs(p.vx); hits.push(clock); }
-          if (p.py < DOT) { p.py = DOT; p.vy = Math.abs(p.vy); hits.push(clock); }
-          if (p.py > maxY) { p.py = maxY; p.vy = -Math.abs(p.vy); hits.push(clock); }
-          dots[i].setAttribute("cx", (box.x + p.px).toFixed(1));
-          dots[i].setAttribute("cy", (box.y + p.py).toFixed(1));
-          dots[i].setAttribute("fill", colour);
-        });
-        while (hits.length && hits[0] < clock - 2) hits.shift();
-        if (clock > 2) note.textContent = `Wall hits per second: about ${Math.round(hits.length / 2)}`;
+          for (const p of parts) {
+            // positions are stored in pixels inside the box
+            if (p.px === undefined) { p.px = DOT + p.x * (box.w - 2 * DOT); p.py = DOT + p.y * (box.h - 2 * DOT); }
+            p.ox = p.px; p.oy = p.py;
+            p.px += p.vx * speed; p.py += p.vy * speed;
+            if (p.px < DOT) { p.px = DOT; p.vx = Math.abs(p.vx); hits.push(clock); }
+            if (p.px > maxX) { p.px = maxX; p.vx = -Math.abs(p.vx); hits.push(clock); }
+            if (p.py < DOT) { p.py = DOT; p.vy = Math.abs(p.vy); hits.push(clock); }
+            if (p.py > maxY) { p.py = maxY; p.vy = -Math.abs(p.vy); hits.push(clock); }
+          }
+          while (hits.length && hits[0] < clock - 2) hits.shift();
+        },
+        render(alpha) {
+          const colour = heatColour(Number(sT.value));
+          if (colour !== lastColour) { lastColour = colour; dots.setAttribute("fill", colour); }
+          let d = "";
+          for (const p of parts) {
+            if (p.ox === undefined) continue;
+            const x = box.x + SS.lerp(p.ox, p.px, alpha), y = box.y + SS.lerp(p.oy, p.py, alpha);
+            // a circle of radius DOT drawn as two half-circle arcs
+            d += `M${(x - DOT).toFixed(1)},${y.toFixed(1)}a${DOT},${DOT} 0 1,0 ${2 * DOT},0a${DOT},${DOT} 0 1,0 ${-2 * DOT},0`;
+          }
+          dots.setAttribute("d", d);
+          const text = clock > 2 ? `Wall hits per second: about ${Math.round(hits.length / 2)}` : "";
+          if (text !== lastNote) { lastNote = text; note.textContent = text; }
+        },
       });
 
-      sT.addEventListener("input", layout);
-      sV.addEventListener("input", layout);
+      // Slider drags: update at most once per frame
+      const onSlide = SS.perFrame(layout);
+      sT.addEventListener("input", onSlide);
+      sV.addEventListener("input", onSlide);
       setup();
       const unwatch = SS.watchWidth(svg.parentElement, () => {
-        parts.forEach((p) => { p.px = undefined; p.x = Math.random(); p.y = Math.random(); });
+        parts.forEach((p) => { p.px = p.ox = undefined; p.x = Math.random(); p.y = Math.random(); });
+        lastColour = "";
         setup();
       });
-      return () => { stop(); unwatch(); };
+      return () => { stop(); onSlide.cancel(); unwatch(); };
     },
   });
 })();
