@@ -125,7 +125,7 @@
       }
 
       function stopAuto() {
-        if (timer) clearInterval(timer);
+        if (timer) timer(); // timer holds the stop() function of the auto-play loop
         timer = null;
         btnAuto.setAttribute("aria-pressed", "false");
         btnAuto.textContent = "Auto-play";
@@ -142,10 +142,11 @@
         }
         // bugs at repeatable positions for this generation
         const place = rng(seed + gen * 7919);
+        const bugs = SS.svgEl("g", { class: "fade-in" }, field); // each new generation fades in
         const size = Math.max(7, Math.min(11, W / 40));
         pop.forEach((c) => {
           const x = size * 1.5 + place() * (W - size * 3), y = size * 1.5 + place() * (H - size * 3), turn = Math.round(place() * 360);
-          const g = SS.svgEl("g", { transform: `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${turn})` }, field);
+          const g = SS.svgEl("g", { transform: `translate(${x.toFixed(1)},${y.toFixed(1)}) rotate(${turn})` }, bugs);
           const edge = { stroke: "rgba(128,128,128,0.45)", "stroke-width": 0.8 };
           SS.svgEl("ellipse", Object.assign({ cx: -size * 0.55, cy: 0, rx: size * 0.7, ry: size * 0.45, fill: BUG[c] }, edge), g);
           SS.svgEl("ellipse", Object.assign({ cx: size * 0.55, cy: 0, rx: size * 0.7, ry: size * 0.45, fill: BUG[c] }, edge), g);
@@ -182,7 +183,14 @@
         if (timer) return stopAuto();
         btnAuto.setAttribute("aria-pressed", "true");
         btnAuto.textContent = "Pause";
-        timer = setInterval(step, 700);
+        // Auto-play on the animation loop (no setInterval): add up real time and step one
+        // generation every 0.7 s. It pauses with the tab and never bunches up.
+        let waited = 0;
+        timer = SS.loop((dt) => {
+          waited += dt;
+          if (waited >= 0.7) { waited -= 0.7; step(); }
+          if (!timer) return false; // step() may have stopped auto-play
+        });
       });
       root.querySelector('[data-act="reset"]').addEventListener("click", reset);
 
