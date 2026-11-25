@@ -72,9 +72,12 @@
         set("err", (EXACT - sum).toFixed(3) + " m");
       }
 
-      slider.addEventListener("input", draw);
+      // Slider drags: redraw at most once per frame
+      const onSlide = SS.perFrame(draw);
+      slider.addEventListener("input", onSlide);
       draw();
-      return SS.watchWidth(svg.parentElement, draw);
+      const unwatch = SS.watchWidth(svg.parentElement, draw);
+      return () => { onSlide.cancel(); unwatch(); };
     },
   });
 })();
