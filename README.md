@@ -47,6 +47,7 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 | `app.js` | Home screen and `#hash` routing (adds the quiz under each concept automatically) |
 | `manifest.json`, `sw.js`, `icons/` | Make it installable and work offline |
 | `tests/*.test.js` | All tests (run together by `tests/run-all.js`) |
+| `tests/animation.test.js` | Checks the animation helpers with fake screen refreshes (60/120 Hz, tab switches, fixed physics steps) |
 | `tests/checks/<id>.js` | One file per concept: **calculates** the right answer to each of its quiz questions |
 
 ## How to add a new concept
@@ -91,6 +92,22 @@ Both must come before `app.js`.
 `node tests/run-all.js` will fail if any of these are missing, if the concept isn't in `index.html` or `sw.js`, or if a marked answer doesn't match the maths.
 
 **Files to create, in short:** `concepts/waves.js`, `questions/waves.js`, `tests/checks/waves.js`, `tests/waves.test.js`. **Files to edit:** `index.html` (2 script lines; this registers the home card) and `sw.js` (2 file names + bump `CACHE_VERSION`).
+
+## Animation rules (keep every concept smooth)
+Every concept should feel smooth at 60 fps on phones and laptops. Use the helpers in `core.js`:
+
+1. **Only `requestAnimationFrame`** for anything that moves. Never use `setInterval`/`setTimeout` to animate. Use `SS.loop((dt) => { ... })`; return `false` to stop. It runs once per screen refresh and stops itself when you leave the page (return its stop function from `render`).
+2. **Time-based, not frame-based.** Move things by `speed × dt` (dt = real seconds since the last frame, capped at 0.05 s). Then they move at the same speed on 60 Hz and 120 Hz screens, and a pause or tab switch never causes a big jump. `SS.loop` also restarts its clock when the tab becomes visible again.
+3. **Physics uses a fixed step.** Use `SS.physicsLoop({ step(h) { ... }, render(alpha) { ... } })`. `step` advances the simulation by exactly 1/240 s, as many times as needed. `render` draws `SS.lerp(previous, current, alpha)`, i.e. in between the last two steps. Keep a `prev` copy of the state for this. Examples: `concepts/pendulum.js`, `gas.js`, `centripetal.js`, `terminal-velocity.js`.
+4. **Slider drags: at most one redraw per frame.** Wrap the handler: `const onSlide = SS.perFrame(draw); slider.addEventListener("input", onSlide);` and call `onSlide.cancel()` in the clean-up. If something must react to *every* value (e.g. "did it get too hot?"), check that in the event and only batch the drawing.
+5. **Build the picture once, then move it.** Draw axes, grids and labels once (and again only on resize). Each frame, change attributes of existing elements (`setAttribute`, `SS.setArrow`) instead of deleting and re-creating SVG. Many identical dots can be one `<path>`. Only write text to the page when it actually changes.
+6. **Ease, don't snap.** For a value following the user (like the Taylor slider), glide with `shown = SS.smooth(shown, target, dt, 0.07)`. For one-off moves use an ease-out curve over about 150–300 ms (up to ~0.8 s for a big turn).
+7. **CSS: animate only `transform` and `opacity`** (never `width`, `top`, `left`). Use `var(--ease-out)` and 150–300 ms. Add `will-change` only on things that animate often (the XP bar fill, popups).
+8. **Reduced motion** (`SS.reducedMotion()`): keep it calm. Use shorter, fades instead of big sweeping movement, but still smooth, never a hard jump.
+9. **Sliders** already have `touch-action: pan-y`, so a sideways drag moves the slider and a vertical swipe still scrolls. Don't block touch on graphs that aren't draggable, or people can't scroll past them.
+10. **Sharp drawings:** everything is SVG, which is sharp on every screen. If you ever add a `<canvas>`, scale it by `Math.min(devicePixelRatio, 2)`.
+
+**Check it:** add `?fps=1` to the address (e.g. `yoursite.vercel.app/?fps=1#pendulum`) to show a small frame counter in the corner. Green means 55 fps or more; red means it's dropping frames.
 
 ## Running the tests
 ```
