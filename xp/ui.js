@@ -87,6 +87,7 @@
         <p class="levelup-hint">Tap to continue</p>
       </div>`;
     document.body.appendChild(banner);
+    if (window.SFX) SFX.playLevelUp();
 
     if (bar) {
       bar.classList.remove("is-charged");
@@ -125,7 +126,12 @@
       let msg = `Plus ${result.total} XP.`;
       if (result.leveledUp) msg += ` Power up! Level ${result.newLevel}.`;
       announce(msg);
-      if (result.leveledUp) setTimeout(() => levelUp(result), reduceMotion() ? 0 : 450);
+      if (result.leveledUp) {
+        setTimeout(() => levelUp(result), reduceMotion() ? 0 : 450); // level-up sound plays with the banner
+      } else if (window.SFX) {
+        if (result.gains.some((g) => g.streak)) SFX.playStreak();
+        else SFX.playXP();
+      }
     }
     return result;
   }

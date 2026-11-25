@@ -27,6 +27,7 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 | `xp/engine.js` | XP rules: levels, ranks, streaks, anti-farming (no screen code; tested) |
 | `xp/storage.js` | **All saving code** (localStorage). Swap this file for a real backend later |
 | `xp/ui.js` | Power Level bar, "+10 XP" popups, POWER UP! banner, Profile screen |
+| `sound/sfx.js` | **All sound effects**, generated in code (no audio files), plus the 🔊/🔇 button |
 | `concepts/<id>.js` | One file per concept: its maths, home-card details and drawing code |
 | `questions/<id>.js` | One file per concept: its quiz questions as plain data |
 | `app.js` | Home screen and `#hash` routing (adds the quiz under each concept automatically) |
@@ -98,6 +99,23 @@ The question tests check that every question has exactly 4 different options, on
 - **Auras:** cosmetic glow colours for the header bar. Amber from the start, then Cyan at level 5, Red at 10 and White-gold at 15. Pick one on the Profile screen; locked ones are greyed out.
 - **Level up:** a "POWER UP!" banner, an amber glow, and a short vibration on phones that support it. With "reduce motion" turned on in the device settings, these become simple fades, with no movement or pulsing.
 - **Saved** on the device in `localStorage` under the key `superscience.progress`, as `{ version: 1, xp, level, streak, lastActiveDate, completedQuestions, seenConcepts, perfectConcepts, unlockedAuras, chosenAura }`. If the browser blocks storage, XP still works for that visit and the Profile screen shows a warning. **Reset progress** (with a confirm step) is at the bottom of the Profile screen.
+
+## Sound effects
+All sounds are made in code with the Web Audio API in **`sound/sfx.js`**. There are no audio files, so nothing to download and no copyright issues. They are simple original synth tones.
+
+| Sound | When | Length |
+|---|---|---|
+| Bright "ding" (quick rising pitch) | XP earned | ~0.15 s |
+| Sparkle (four quick high notes) | XP earned with a daily streak bonus | ~0.25 s |
+| Two-note chime | Correct answer | ~0.3 s |
+| Soft low "bonk" | Wrong answer | ~0.15 s |
+| Rising sweep then a punchy chord | Level up, together with the POWER UP! banner | ~1 s |
+
+- **Quiet by default.** Change `VOLUME` at the top of `sound/sfx.js` (0 to 1, currently 0.18). A built-in limiter stops sounds stacking up loudly.
+- **No overlaps.** Sounds asked for at the same moment play only the most important one (level-up > correct/wrong > streak > XP ding). A small sound won't cut off a bigger one that's still playing. So a level-up plays only the level-up sound, not the XP ding as well.
+- **Phones:** browsers block audio until you tap, so audio switches on at your first tap or click anywhere. On iPhone, the silent switch also mutes these sounds.
+- **Mute:** the 🔊/🔇 button next to the Power Level bar. The choice is saved on the device (`localStorage` key `superscience.sound`; still works this visit if storage is blocked). If the device has "reduce motion" turned on, sound starts **muted** until you switch it on.
+- **Using sounds in new code (one line):** `SFX.playXP()`, `SFX.playCorrect()`, `SFX.playWrong()`, `SFX.playLevelUp()` or `SFX.playStreak()`. To add a brand-new sound, add a function to `SOUNDS` in `sound/sfx.js`, give it a `PRIORITY`, and add a `playX` line at the bottom.
 
 ### Changing the numbers
 Edit **`xp/config.js`**. Every reward, the streak bonus and cap, the level curve (`firstLevelUp`, `extraPerLevel`), the rank names and the aura unlock levels are there. Then run the tests, bump `CACHE_VERSION` in `sw.js`, and push.

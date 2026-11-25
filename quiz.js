@@ -99,6 +99,7 @@
       const result = checkAnswer(q, chosen);
       results.push(result.correct);
       if (result.correct) score++;
+      if (window.SFX) result.correct ? SFX.playCorrect() : SFX.playWrong();
 
       // XP: pays only the first time this question is ever answered correctly.
       const chosenBtn = body.querySelector(`.quiz-option[data-k="${chosen}"]`);

@@ -428,6 +428,39 @@ input[type="range"]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px var(
 .quiz-score b { font-size: 3.4rem; color: var(--amber); font-weight: 900; text-shadow: 0 0 18px rgba(255, 179, 0, 0.35); }
 .quiz-message { margin: 0; color: var(--white); }
 
+/* ---------- Header row: Power Level bar + sound button ---------- */
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 520px;
+  margin: 14px auto 0;
+}
+.header-row .power { flex: 1; min-width: 0; margin: 0; }
+.sound-toggle {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  font-size: 1.15rem;
+  line-height: 1;
+  color: var(--white);
+  background: var(--panel);
+  border: 1.5px solid rgba(77, 217, 255, 0.35);
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.sound-toggle:hover { border-color: var(--cyan); }
+.sound-toggle:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+.sound-toggle[aria-pressed="false"] { opacity: 0.6; }
+@media (max-width: 380px) {
+  .header-row .power { gap: 7px; padding: 8px 11px; }
+  .power-xp { display: none; } /* the bar still shows progress; numbers are in the Profile */
+  .power-track { min-width: 30px; }
+}
+
 /* ---------- XP: Power Level bar (header) ---------- */
 .power {
   --aura: var(--amber);

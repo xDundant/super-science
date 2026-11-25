@@ -21,7 +21,10 @@
 <body>
   <header class="site-header">
     <h1 class="logo"><a href="#" aria-label="Super Science home">SUPER <span>SCIENCE</span></a></h1>
-    <a class="power" id="power" href="#profile" aria-label="Power level. Open profile."></a>
+    <div class="header-row">
+      <a class="power" id="power" href="#profile" aria-label="Power level. Open profile."></a>
+      <button type="button" class="sound-toggle" id="sound-toggle" aria-label="Sound">🔊</button>
+    </div>
   </header>
 
   <main class="concepts" id="app">
@@ -32,6 +35,7 @@
     <a href="https://instagram.com/super.science9" target="_blank" rel="noopener">Follow <strong>@super.science9</strong></a>
   </footer>
 
+  <script src="sound/sfx.js"></script>
   <script src="core.js"></script>
   <!-- XP / Power Level: numbers, rules, saving, then the on-screen parts. -->
   <script src="xp/config.js"></script>
