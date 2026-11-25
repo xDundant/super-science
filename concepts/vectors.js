@@ -146,10 +146,13 @@
         out("xy").textContent = `(${f(R.x)}, ${f(R.y)})`;
       }
 
-      [aLen, aAng, bLen, bAng].forEach((s) => s.addEventListener("input", update));
+      // Slider drags: redraw at most once per frame
+      const onSlide = SS.perFrame(update);
+      [aLen, aAng, bLen, bAng].forEach((s) => s.addEventListener("input", onSlide));
       drawStatic();
       update();
-      return SS.watchWidth(wrap, () => { drawStatic(); update(); });
+      const unwatch = SS.watchWidth(wrap, () => { drawStatic(); update(); });
+      return () => { onSlide.cancel(); unwatch(); };
     },
   });
 })();
