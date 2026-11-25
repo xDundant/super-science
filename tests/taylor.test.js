@@ -1,6 +1,6 @@
 // Run with:  node tests/taylor.test.js
 const assert = require("assert");
-const { taylorSin, polynomialLabel } = require("../app.js");
+const { taylorSin, polynomialLabel } = require("../concepts/taylor.js");
 
 // n = 1 is just "x"
 assert.strictEqual(taylorSin(2, 1), 2);

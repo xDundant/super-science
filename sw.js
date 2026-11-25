@@ -1,11 +1,15 @@
 /* Super Science service worker: makes the app work offline.
  * When you change any file, bump CACHE_VERSION so phones get the new version.
  */
-const CACHE_VERSION = "super-science-v1";
+const CACHE_VERSION = "super-science-v2";
 const FILES = [
   "./",
   "index.html",
   "style.css",
+  "core.js",
+  "concepts/taylor.js",
+  "concepts/vectors.js",
+  "concepts/projectile.js",
   "app.js",
   "manifest.json",
   "icons/icon.svg",

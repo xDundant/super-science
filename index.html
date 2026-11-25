@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Super Science</title>
-  <meta name="description" content="Interactive maths concepts from @super.science9. See the Taylor series of sin(x) come to life.">
+  <meta name="description" content="Interactive maths concepts from @super.science9. Taylor series, vectors, projectile motion and more.">
   <meta name="theme-color" content="#0B1026">
 
   <!-- PWA -->
@@ -20,44 +20,23 @@
 </head>
 <body>
   <header class="site-header">
-    <h1 class="logo">SUPER <span>SCIENCE</span></h1>
+    <h1 class="logo"><a href="#" aria-label="Super Science home">SUPER <span>SCIENCE</span></a></h1>
     <!-- Future: power level / points badge goes here -->
   </header>
 
-  <main class="concepts">
-    <!-- Each concept is one <section class="concept">. Add more here later. -->
-    <section class="concept" id="taylor-sin" aria-labelledby="taylor-title">
-      <h2 class="concept-title" id="taylor-title">Taylor series of sin(x)</h2>
-
-      <div class="legend" aria-hidden="true">
-        <span class="legend-item"><i class="swatch swatch-sin"></i>sin(x)</span>
-        <span class="legend-item"><i class="swatch swatch-taylor"></i>Taylor polynomial</span>
-      </div>
-
-      <div class="graph-wrap">
-        <svg id="graph" role="img" aria-label="Graph of sin(x) and its Taylor polynomial"></svg>
-      </div>
-
-      <p class="poly" id="poly" aria-live="polite">x</p>
-
-      <div class="control">
-        <label for="terms" class="control-label">
-          Terms: <strong id="terms-value">1</strong>
-        </label>
-        <input type="range" id="terms" min="1" max="10" step="1" value="1">
-        <div class="control-ends" aria-hidden="true"><span>1</span><span>10</span></div>
-      </div>
-
-      <p class="error-readout" id="error-readout"></p>
-
-      <p class="caption">Add more terms and the polynomial hugs sin(x) further out.</p>
-    </section>
+  <main class="concepts" id="app">
+    <noscript><p class="intro">Super Science needs JavaScript turned on.</p></noscript>
   </main>
 
   <footer class="site-footer">
     <a href="https://instagram.com/super.science9" target="_blank" rel="noopener">Follow <strong>@super.science9</strong></a>
   </footer>
 
+  <script src="core.js"></script>
+  <!-- Concepts: one file each. Cards appear on the home screen in this order. -->
+  <script src="concepts/taylor.js"></script>
+  <script src="concepts/vectors.js"></script>
+  <script src="concepts/projectile.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
