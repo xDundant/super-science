@@ -77,9 +77,12 @@
         eq.textContent = `(1 + 1/${big(n)})${n <= 8760 ? sup(n) : "ⁿ"} = ${total.toFixed(6)}`;
       }
 
-      slider.addEventListener("input", draw);
+      // Slider drags: redraw at most once per frame
+      const onSlide = SS.perFrame(draw);
+      slider.addEventListener("input", onSlide);
       draw();
-      return SS.watchWidth(svg.parentElement, draw);
+      const unwatch = SS.watchWidth(svg.parentElement, draw);
+      return () => { onSlide.cancel(); unwatch(); };
     },
   });
 })();
