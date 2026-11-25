@@ -46,10 +46,15 @@
         <p class="caption">The string pulls the ball <b>towards the centre</b>. That force, F = mv²/r, keeps bending its path into a circle. Let go and there's no force left, so the ball flies off in a <b>straight line along the tangent</b> (Newton's 1st law).</p>`);
       const btnRelease = root.querySelector('[data-act="release"]');
 
-      let angle = 0, released = false, pos = null, vel = null;
-      let W = 400, scale = 1, c = 200, layer = null;
+      // State now and one physics step ago (prev*), so drawing can sit smoothly in between.
+      let angle = 0, prevAngle = 0, released = false, pos = null, prevPos = null, vel = null;
+      let W = 400, scale = 1, c = 200, el = null;
       const sx = (x) => c + x * scale, sy = (y) => c - y * scale;
+      const shown = {};
+      const setOnce = (key, text) => { if (shown[key] !== text) { shown[key] = text; set(key, text); } };
+      const put = (node, attrs) => { for (const k in attrs) node.setAttribute(k, typeof attrs[k] === "number" ? attrs[k].toFixed(1) : attrs[k]); };
 
+      // Grid plus all moving parts, created once (and again only on resize).
       function drawStatic() {
         const f = SS.fit(svg, 1, 1);
         W = f.W; c = W / 2; scale = (W / 2 - 10) / VIEW;
@@ -58,44 +63,63 @@
           SS.svgEl("line", { x1: sx(m), y1: 0, x2: sx(m), y2: W }, grid);
           SS.svgEl("line", { x1: 0, y1: sy(m), x2: W, y2: sy(m) }, grid);
         }
-        layer = SS.svgEl("g", {}, svg);
+        el = {
+          path: SS.svgEl("circle", { cx: c, cy: c, fill: "none", stroke: "rgba(255,255,255,0.18)", "stroke-width": 1.5, "stroke-dasharray": "5 6" }, svg),
+          centre: SS.svgEl("circle", { cx: c, cy: c, r: 5, fill: "#4DD9FF" }, svg),
+          string: SS.svgEl("line", { x1: c, y1: c, stroke: "#FFFFFF", "stroke-width": 2 }, svg),
+          force: SS.arrow(svg, 0, 0, 0, 0, "#FF4D5E", 3.5),
+          velocity: SS.arrow(svg, 0, 0, 0, 0, "#4DD9FF", 3),
+          ball: SS.svgEl("circle", { fill: "#FFB300", stroke: "#000", "stroke-width": 2 }, svg),
+        };
       }
 
-      function frame() {
+      function render(alpha) {
         const v = Number(sV.value), r = Number(sR.value), m = Number(sM.value);
-        layer.innerHTML = "";
         const ballR = 6 + m * 2;
-        // the circular path
-        SS.svgEl("circle", { cx: c, cy: c, r: r * scale, fill: "none", stroke: "rgba(255,255,255,0.18)", "stroke-width": 1.5, "stroke-dasharray": "5 6" }, layer);
-        SS.svgEl("circle", { cx: c, cy: c, r: 5, fill: "#4DD9FF" }, layer);
-        let bx, by;
+        put(el.path, { r: r * scale });
+        put(el.ball, { r: ballR });
+        let bx, by, ux, uy;
         if (!released) {
-          bx = r * Math.cos(angle); by = r * Math.sin(angle);
-          SS.svgEl("line", { x1: c, y1: c, x2: sx(bx), y2: sy(by), stroke: "#FFFFFF", "stroke-width": 2 }, layer);
+          const a = SS.lerp(prevAngle, angle, alpha);
+          bx = r * Math.cos(a); by = r * Math.sin(a);
+          el.string.style.display = "";
+          put(el.string, { x2: sx(bx), y2: sy(by) });
           // force arrow towards the centre (longer for bigger force)
           const F = force(m, v, r);
           const len = Math.min(r * scale - ballR, 14 + 70 * Math.sqrt(F / 2000));
-          SS.arrow(layer, sx(bx), sy(by), sx(bx) - Math.cos(angle) * len, sy(by) + Math.sin(angle) * len, "#FF4D5E", 3.5);
-          const u = releaseVelocity(angle, 1);
-          const vl = 16 + v * 3;
-          SS.arrow(layer, sx(bx), sy(by), sx(bx) + u.x * vl, sy(by) - u.y * vl, "#4DD9FF", 3);
+          el.force.style.visibility = "";
+          SS.setArrow(el.force, sx(bx), sy(by), sx(bx) - Math.cos(a) * len, sy(by) + Math.sin(a) * len);
+          const u = releaseVelocity(a, 1); ux = u.x; uy = u.y;
         } else {
-          bx = pos.x; by = pos.y;
-          const s = Math.hypot(vel.x, vel.y), vl = 16 + s * 3;
-          SS.arrow(layer, sx(bx), sy(by), sx(bx) + (vel.x / s) * vl, sy(by) - (vel.y / s) * vl, "#4DD9FF", 3);
+          bx = SS.lerp(prevPos.x, pos.x, alpha); by = SS.lerp(prevPos.y, pos.y, alpha);
+          el.string.style.display = "none";
+          el.force.style.visibility = "hidden";
+          const s2 = Math.hypot(vel.x, vel.y); ux = vel.x / s2; uy = vel.y / s2;
         }
-        SS.svgEl("circle", { cx: sx(bx), cy: sy(by), r: ballR, fill: "#FFB300", stroke: "#000", "stroke-width": 2 }, layer);
+        const vl = 16 + v * 3;
+        SS.setArrow(el.velocity, sx(bx), sy(by), sx(bx) + ux * vl, sy(by) - uy * vl);
+        put(el.ball, { cx: sx(bx), cy: sy(by) });
 
-        set("f", force(m, v, r).toFixed(1) + " N");
-        set("a", acceleration(v, r).toFixed(1) + " m/s²");
-        set("lap", lapTime(v, r).toFixed(2) + " s");
+        setOnce("f", force(m, v, r).toFixed(1) + " N");
+        setOnce("a", acceleration(v, r).toFixed(1) + " m/s²");
+        setOnce("lap", lapTime(v, r).toFixed(2) + " s");
       }
 
-      const stop = SS.loop((dt) => {
-        const v = Number(sV.value), r = Number(sR.value);
-        if (!released) angle = (angle + (v / r) * dt) % (2 * Math.PI);
-        else if (Math.abs(pos.x) < VIEW + 2 && Math.abs(pos.y) < VIEW + 2) { pos.x += vel.x * dt; pos.y += vel.y * dt; }
-        frame();
+      // Fixed 1/240 s physics steps; drawing interpolates between them.
+      const stop = SS.physicsLoop({
+        step(h) {
+          const v = Number(sV.value), r = Number(sR.value);
+          if (!released) {
+            prevAngle = angle;
+            angle += (v / r) * h;
+            // keep the numbers small, shifting both together so the in-between drawing is unaffected
+            if (angle > 2 * Math.PI) { angle -= 2 * Math.PI; prevAngle -= 2 * Math.PI; }
+          } else {
+            prevPos = { x: pos.x, y: pos.y };
+            if (Math.abs(pos.x) < VIEW + 2 && Math.abs(pos.y) < VIEW + 2) { pos.x += vel.x * h; pos.y += vel.y * h; }
+          }
+        },
+        render,
       });
 
       btnRelease.addEventListener("click", () => {
@@ -103,17 +127,18 @@
         const v = Number(sV.value), r = Number(sR.value);
         released = true;
         pos = { x: r * Math.cos(angle), y: r * Math.sin(angle) };
+        prevPos = { x: pos.x, y: pos.y };
         vel = releaseVelocity(angle, v);
         btnRelease.disabled = true;
         note.textContent = "No string, no force towards the centre: the ball carries straight on.";
       });
       root.querySelector('[data-act="reset"]').addEventListener("click", () => {
-        released = false; btnRelease.disabled = false; note.textContent = "";
+        released = false; prevAngle = angle; btnRelease.disabled = false; note.textContent = "";
       });
 
       drawStatic();
-      frame();
-      const unwatch = SS.watchWidth(svg.parentElement, () => { drawStatic(); frame(); });
+      render(1);
+      const unwatch = SS.watchWidth(svg.parentElement, () => { drawStatic(); render(1); });
       return () => { stop(); unwatch(); };
     },
   });
