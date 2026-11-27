@@ -35,5 +35,13 @@ for (const f of cached) if (f !== "./") assert.ok(fs.existsSync(path.join(root, 
 const appAt = scripts.indexOf("app.js");
 scripts.forEach((s, i) => { if (/^(concepts|questions)\//.test(s)) assert.ok(i < appAt, `${s} must be loaded before app.js`); });
 
+// Every minigame file is loaded (before app.js) and cached for offline use
+for (const g of list("games")) {
+  const f = `games/${g}.js`;
+  assert.ok(scripts.includes(f), `${f} is not loaded in index.html`);
+  assert.ok(cached.includes(f), `${f} is not in the FILES list in sw.js`);
+  assert.ok(scripts.indexOf(f) < appAt, `${f} must be loaded before app.js`);
+}
+for (const f of ["nav.js"]) { assert.ok(scripts.includes(f) && cached.includes(f), `${f} must be loaded and cached`); }
 console.log(`Checked ${concepts.length} concepts are fully wired up`);
 console.log("All structure tests passed ✅");

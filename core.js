@@ -41,6 +41,13 @@ window.SuperScience = (function () {
     concepts.push(concept);
   }
 
+  // Minigames register themselves the same way as concepts (see games/*.js):
+  //   { id, title, icon, description, status: "live" | "soon", render(el) }
+  const games = [];
+  function registerGame(game) {
+    games.push(game);
+  }
+
   function addQuestions(conceptId, list) {
     questions[conceptId] = list;
   }
@@ -251,7 +258,7 @@ window.SuperScience = (function () {
   const pathD = (pts) => pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + "," + p[1].toFixed(1)).join("");
 
   return {
-    concepts, register, questions, addQuestions, escapeHTML, svgEl, slider, watchWidth, arrow,
+    concepts, register, questions, addQuestions, games, registerGame, escapeHTML, svgEl, slider, watchWidth, arrow,
     reducedMotion, fmt, loop, physicsLoop, perFrame, smooth, lerp, setArrow, stats, select, fit, axes, pathD,
   };
 })();

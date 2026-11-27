@@ -8,8 +8,8 @@
   const app = document.getElementById("app");
   const SITE_TITLE = "Super Science";
   let cleanup = null;      // undo function for the concept currently on screen
-  let cameFromHome = false; // so the on-page back button behaves like the browser's
-  let current = null;       // "home", a concept id, or null before the first screen
+  let current = null;       // the page showing: "home", a concept id, "profile", "games", "games/quiz"
+  let previous = null;      // the page before it (so "←" can behave like the browser's back button)
 
   const escapeHTML = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
@@ -51,17 +51,19 @@
 
   // A page with a back link and a titled card. fill(section) adds the content
   // and may return a cleanup function.
-  function renderPage(title, fill) {
+  // back = where the "←" link goes: { route, label } (route "home" is the home screen)
+  function renderPage(title, fill, back = { route: "home", label: "All concepts" }) {
     document.title = `${title} · ${SITE_TITLE}`;
+    const backHref = back.route === "home" ? "#" : "#" + back.route;
     app.innerHTML = `
-      <a class="back" href="#">← All concepts</a>
+      <a class="back" href="${backHref}">← ${escapeHTML(back.label)}</a>
       <section class="concept" aria-labelledby="concept-title">
         <h2 class="concept-title" id="concept-title" tabindex="-1">${escapeHTML(title)}</h2>
       </section>`;
 
     app.querySelector(".back").addEventListener("click", (e) => {
-      // If we got here from the home screen, step back in history instead of piling up entries.
-      if (cameFromHome) { e.preventDefault(); history.back(); }
+      // If we came from the page the link points to, step back in history instead of piling up entries.
+      if (previous === back.route) { e.preventDefault(); history.back(); }
     });
 
     const section = app.querySelector(".concept");
@@ -84,14 +86,20 @@
     window.scrollTo(0, 0); // before drawing, so XP popups appear in the right place
     const id = decodeURIComponent(location.hash.slice(1));
     const concept = SS.concepts.find((c) => c.id === id);
+    const game = id.startsWith("games/") ? SS.games.find((g) => g.id === id.slice(6) && g.status === "live") : null;
+    previous = current;
     if (concept) {
-      cameFromHome = current === "home";
       renderConcept(concept);
       current = concept.id;
     } else if (id === "profile" && SS.xp) {
-      cameFromHome = current === "home";
-      renderPage("Your Power Level", (section) => SS.xp.renderProfile(section));
+      renderPage("Your Power Level", (section) => SS.xp.renderProfile(section), { route: "home", label: "Home" });
       current = "profile";
+    } else if (id === "games") {
+      renderPage("Minigames", (section) => SS.renderGamesHub(section), { route: "home", label: "Home" });
+      current = "games";
+    } else if (game) {
+      renderPage(game.title, (section) => game.render(section), { route: "games", label: "Minigames" });
+      current = "games/" + game.id;
     } else {
       renderHome();
       current = "home";
