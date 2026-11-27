@@ -286,8 +286,27 @@
   document.addEventListener("visibilitychange", () => { if (!document.hidden) renderBar(); });
   window.addEventListener("hashchange", renderBar);
 
+  // A finished minigame. Saves the best score even when no XP is paid (cap reached).
+  function recordMinigame(data, anchor) {
+    const result = Engine.recordMinigame(state, data, new Date());
+    state = result.state;
+    Storage.save(state);
+    renderBar();
+    if (result.total > 0) {
+      popups(result.gains, anchor);
+      let msg = `Plus ${result.total} XP.`;
+      if (result.leveledUp) msg += ` Power up! Level ${result.newLevel}.`;
+      announce(msg);
+      if (result.leveledUp) setTimeout(() => levelUp(result), reduceMotion() ? 0 : 450);
+      else if (window.SFX) SFX.playXP();
+    }
+    return result;
+  }
+
   SS.xp = {
     award,
+    recordMinigame,
+    minigameXPLeft: () => Engine.minigameXPLeft(state),
     renderProfile,
     get state() { return state; },
   };

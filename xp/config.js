@@ -8,6 +8,13 @@
     firstCorrectQuestion: 10,  // first time you get a particular question right
     perfectScore: 25,          // first perfect score (5/5) on a concept's questions
 
+    // Minigames (e.g. the 3-Second Quiz). These CAN be replayed, so they are capped per day.
+    minigames: {
+      perCorrect: 2,      // XP for each correct answer in a game
+      perfectBonus: 10,   // extra XP for a perfect game (e.g. 8/8)
+      dailyCap: 40,       // most minigame XP you can earn in one day (then it's just for fun)
+    },
+
     // Daily streak bonus, added the first time you earn XP on a new day.
     // Day 1 = start, day 2 = start + perDay, ... never more than max.
     streak: { start: 5, perDay: 1, max: 15 },

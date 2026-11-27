@@ -142,7 +142,7 @@ globalThis.localStorage = { getItem: (k) => (k in fake ? fake[k] : null), setIte
 s = E.award(E.freshState(), { type: "openConcept", conceptId: "taylor" }, day(0)).state;
 assert.strictEqual(Storage.save(s), true);
 assert.deepStrictEqual(Object.keys(fake), [Storage.KEY], "everything saved under ONE key");
-assert.strictEqual(JSON.parse(fake[Storage.KEY]).version, 1);
+assert.strictEqual(JSON.parse(fake[Storage.KEY]).version, E.VERSION);
 assert.deepStrictEqual(Storage.load(), s, "save then load gives the same progress");
 fake[Storage.KEY] = "{not json";
 assert.deepStrictEqual(Storage.load().seenConcepts, ["taylor"], "corrupted data falls back to this visit's copy");

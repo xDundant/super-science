@@ -7,7 +7,9 @@
     ? window.SuperScienceXPConfig
     : require("./config.js");
 
-  const VERSION = 1;
+  // Save format version. 2 added minigame best scores and the daily minigame XP tracker.
+  // Older saves are upgraded in normalizeState(), so nobody loses progress.
+  const VERSION = 2;
 
   /* ---------- Levels and ranks ---------- */
 
@@ -90,13 +92,16 @@
       perfectConcepts: [],    // concept ids already scored 5/5 (paid once)
       unlockedAuras: ["amber"],
       chosenAura: "amber",
+      minigames: { quiz: { best: {} } },        // best score per subject, e.g. { Physics: 6 }
+      minigameXP: { date: null, earned: 0 },    // minigame XP earned on `date` (for the daily cap)
     };
   }
 
   // Clean up anything loaded from storage, so broken or edited data can't break the app.
   function normalizeState(raw) {
     const s = freshState();
-    if (!raw || typeof raw !== "object" || raw.version !== VERSION) return s;
+    // Version 1 saves are upgraded: same fields, plus the new minigame ones (empty).
+    if (!raw || typeof raw !== "object" || (raw.version !== 1 && raw.version !== VERSION)) return s;
     const ids = (list) => Array.isArray(list) ? [...new Set(list.filter((x) => typeof x === "string"))] : [];
     s.xp = Number.isFinite(raw.xp) && raw.xp > 0 ? Math.floor(raw.xp) : 0;
     s.streak = Number.isFinite(raw.streak) && raw.streak > 0 ? Math.floor(raw.streak) : 0;
@@ -108,6 +113,17 @@
     s.level = levelInfo(s.xp).level;
     s.unlockedAuras = aurasForLevel(s.level);
     s.chosenAura = s.unlockedAuras.includes(raw.chosenAura) ? raw.chosenAura : "amber";
+    // Minigames (version 2+): only keep sensible numbers
+    const best = raw.minigames && raw.minigames.quiz && raw.minigames.quiz.best;
+    if (best && typeof best === "object") {
+      for (const [subject, score] of Object.entries(best)) {
+        if (typeof subject === "string" && Number.isInteger(score) && score >= 0 && score <= 100) s.minigames.quiz.best[subject] = score;
+      }
+    }
+    const mx = raw.minigameXP;
+    if (mx && typeof mx.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(mx.date) && Number.isFinite(mx.earned) && mx.earned >= 0) {
+      s.minigameXP = { date: mx.date, earned: Math.min(Math.floor(mx.earned), CONFIG.minigames.dailyCap) };
+    }
     return s;
   }
 
@@ -133,14 +149,22 @@
     else if (event.type === "correctAnswer") once(s.completedQuestions, event.questionId, CONFIG.firstCorrectQuestion, "Correct");
     else if (event.type === "perfectScore") once(s.perfectConcepts, event.conceptId, CONFIG.perfectScore, "Perfect score");
 
-    // Streak bonus: only on the first XP actually earned each new day.
+    addStreakBonus(s, gains, now);
+    return finish(state, s, gains);
+  }
+
+  // Streak bonus: only on the first XP actually earned each new day.
+  function addStreakBonus(s, gains, now) {
     const today = dateKey(now);
     if (gains.length && s.lastActiveDate !== today) {
       s.streak = s.lastActiveDate === yesterdayKey(now) ? s.streak + 1 : 1;
       s.lastActiveDate = today;
       gains.push({ amount: streakBonus(s.streak), reason: `Day ${s.streak} streak`, streak: true });
     }
+  }
 
+  // Add up the gains, work out level-ups and newly unlocked auras.
+  function finish(state, s, gains) {
     const total = gains.reduce((sum, g) => sum + g.amount, 0);
     const before = levelInfo(state.xp);
     s.xp += total;
@@ -161,6 +185,39 @@
     };
   }
 
+  // Minigame XP left today (the cap resets at midnight, local time)
+  function minigameXPLeft(state, now = new Date()) {
+    const used = state.minigameXP && state.minigameXP.date === dateKey(now) ? state.minigameXP.earned : 0;
+    return Math.max(0, CONFIG.minigames.dailyCap - used);
+  }
+
+  // A finished minigame: { game: "quiz", subject, score, total }.
+  // Saves the best score, and pays perCorrect × score (+ perfectBonus for a perfect game),
+  // but never more than what's left of today's minigame cap.
+  function recordMinigame(state, { game, subject, score, total }, now = new Date()) {
+    const s = JSON.parse(JSON.stringify(state));
+    const M = CONFIG.minigames;
+    const today = dateKey(now);
+    if (!s.minigames) s.minigames = { quiz: { best: {} } };
+    if (!s.minigames[game]) s.minigames[game] = { best: {} };
+    const previousBest = s.minigames[game].best[subject];
+    const newBest = previousBest === undefined || score > previousBest;
+    if (newBest) s.minigames[game].best[subject] = score;
+
+    const earned = score * M.perCorrect + (score === total && total > 0 ? M.perfectBonus : 0);
+    const left = minigameXPLeft(s, now);
+    const paid = Math.min(earned, left);
+    if (!s.minigameXP || s.minigameXP.date !== today) s.minigameXP = { date: today, earned: 0 };
+    s.minigameXP.earned += paid;
+
+    const gains = paid > 0 ? [{ amount: paid, reason: "Minigame" }] : [];
+    addStreakBonus(s, gains, now);
+    const result = finish(state, s, gains);
+    return Object.assign(result, {
+      earned, paid, capped: paid < earned, capLeft: minigameXPLeft(s, now), newBest, previousBest: previousBest === undefined ? null : previousBest,
+    });
+  }
+
   function chooseAura(state, auraId) {
     if (!state.unlockedAuras.includes(auraId)) return state;
     return Object.assign({}, state, { chosenAura: auraId });
@@ -168,7 +225,7 @@
 
   const ENGINE = {
     CONFIG, VERSION, xpToLevelUp, totalXPForLevel, rankFor, levelInfo, aurasForLevel,
-    dateKey, streakBonus, currentStreak, freshState, normalizeState, award, chooseAura,
+    dateKey, streakBonus, currentStreak, freshState, normalizeState, award, chooseAura, recordMinigame, minigameXPLeft,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = ENGINE;
   if (typeof window !== "undefined") window.SuperScienceXPEngine = ENGINE;
