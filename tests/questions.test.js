@@ -36,6 +36,7 @@ for (const [concept, bank] of Object.entries(BANKS)) {
     assert.ok(q.explanation && q.explanation.trim().length > 20, `${where}: explanation`);
     assert.ok(Array.isArray(q.options) && q.options.length === 4, `${where}: needs exactly 4 options`);
     assert.ok(Number.isInteger(q.correct) && q.correct >= 0 && q.correct <= 3, `${where}: correct must be 0, 1, 2 or 3`);
+    assert.ok(["easy", "medium", "hard", "expert"].includes(q.difficulty), `${where}: difficulty must be easy, medium, hard or expert`);
 
     // No duplicate options (ignoring spaces/case), and no two numbers that are equal (e.g. "5" vs "5.0")
     // Ignore spaces (capitals DO count: in genetics BB, Bb and bb are different answers)
