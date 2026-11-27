@@ -28,6 +28,8 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
   - After each answer it shows green (right) or red (wrong) with a short explanation, then a Next button.
   - At the end it shows your score with a Try again button that reshuffles the order.
   - The quiz score itself lasts for the current visit only, but the XP you earn is saved (see below).
+- **Sidebar:** 🏠 Home, 📚 Concepts (by subject), 🎮 Minigames, 👤 Profile, 🔊 Sound, and a mini Power Level bar. Always visible on laptops; on phones the ☰ button opens it as a drawer (close it with the backdrop, Escape, ✕ or by choosing an item).
+- **Minigames (`#games`):** the **3-Second Quiz** (`#games/quiz`). Pick a subject, then answer 8 questions (2 each 🟢 Easy, 🟡 Medium, 🟠 Hard, 🔴 Expert) with 3 seconds per question. Best scores are saved per subject; "Copy my score" copies a shareable line.
 - **Power Level / XP:** a bar in the header on every page shows your rank, level, XP progress and 🔥 day streak. Tap it to open your **Profile** (`#profile`).
 
 ## Files
@@ -44,6 +46,9 @@ Interactive maths and physics concepts from [@super.science9](https://instagram.
 | `sound/sfx.js` | **All sound effects**, generated in code (no audio files), plus the 🔊/🔇 button |
 | `concepts/<id>.js` | One file per concept: its maths, home-card details and drawing code |
 | `questions/<id>.js` | One file per concept: its quiz questions as plain data |
+| `nav.js` | Sidebar: permanent on laptops, slide-out drawer (☰) on phones |
+| `games/hub.js` | Minigames hub (`#games`) and the "Coming soon" cards |
+| `games/<id>.js` | One file per minigame (e.g. `games/quiz.js`, the 3-Second Quiz at `#games/quiz`) |
 | `app.js` | Home screen and `#hash` routing (adds the quiz under each concept automatically) |
 | `manifest.json`, `sw.js`, `icons/` | Make it installable and work offline |
 | `tests/*.test.js` | All tests (run together by `tests/run-all.js`) |
@@ -71,6 +76,7 @@ Use an id that is short, lowercase, with no spaces, e.g. `waves`. It becomes the
   question: "…?",
   options: ["…", "…", "…", "…"],  // exactly 4, no duplicates
   correct: 2,                     // index of the right option: 0, 1, 2 or 3
+  difficulty: "medium",           // easy | medium | hard | expert (used by the 3-Second Quiz tiers)
   explanation: "1–2 sentences on why.",
 }
 ```
@@ -123,13 +129,15 @@ The question tests check that every question has exactly 4 different options, on
 | Score 5/5 on a concept's questions | +25 XP | Once per concept, ever |
 | Earn any XP on a new day (daily streak) | +5 XP, then +1 more for each day in a row, max +15 | Once per day |
 
+| Finish a minigame | +2 XP per correct answer, +10 for a perfect 8/8 | Up to 40 minigame XP per day, then "for fun" |
+
 - **Anti-farming:** everything pays once. Retaking a question you already got right shows "XP already collected" and earns 0. A day with no *new* XP doesn't earn a streak bonus.
 - **Streak:** counts the days in a row on which you earned XP. Miss a day and it starts again at 1 (+5).
 - **Levels:** Level 2 needs 50 XP. Each level after that needs 20 XP more than the one before (50, 70, 90, 110…). So Level 5 is at 320 XP and Level 10 at 1,170 XP.
 - **Ranks:** a new rank every 5 levels: Spark (1–4), Charged (5–9), Surge (10–14), Overdrive (15–19), Supernova (20–24), Singularity (25+).
 - **Auras:** cosmetic glow colours for the header bar. Amber from the start, then Cyan at level 5, Red at 10 and White-gold at 15. Pick one on the Profile screen; locked ones are greyed out.
 - **Level up:** a "POWER UP!" banner, an amber glow, and a short vibration on phones that support it. With "reduce motion" turned on in the device settings, these become simple fades, with no movement or pulsing.
-- **Saved** on the device in `localStorage` under the key `superscience.progress`, as `{ version: 1, xp, level, streak, lastActiveDate, completedQuestions, seenConcepts, perfectConcepts, unlockedAuras, chosenAura }`. If the browser blocks storage, XP still works for that visit and the Profile screen shows a warning. **Reset progress** (with a confirm step) is at the bottom of the Profile screen.
+- **Saved** on the device in `localStorage` under the key `superscience.progress`, as `{ version: 2, xp, level, streak, lastActiveDate, completedQuestions, seenConcepts, perfectConcepts, unlockedAuras, chosenAura, minigames: { quiz: { best: { Physics: 6, … } } }, minigameXP: { date, earned } }`. Version 1 saves (before minigames) are upgraded automatically with all progress kept. If the browser blocks storage, XP still works for that visit and the Profile screen shows a warning. **Reset progress** (with a confirm step) is at the bottom of the Profile screen.
 
 ## Sound effects
 All sounds are made in code with the Web Audio API in **`sound/sfx.js`**. There are no audio files, so nothing to download and no copyright issues. They are simple original synth tones.
@@ -148,8 +156,22 @@ All sounds are made in code with the Web Audio API in **`sound/sfx.js`**. There 
 - **Mute:** the 🔊/🔇 button next to the Power Level bar. The choice is saved on the device (`localStorage` key `superscience.sound`; still works this visit if storage is blocked). If the device has "reduce motion" turned on, sound starts **muted** until you switch it on.
 - **Using sounds in new code (one line):** `SFX.playXP()`, `SFX.playCorrect()`, `SFX.playWrong()`, `SFX.playLevelUp()` or `SFX.playStreak()`. To add a brand-new sound, add a function to `SOUNDS` in `sound/sfx.js`, give it a `PRIORITY`, and add a `playX` line at the bottom.
 
+## How to add a new minigame
+Use a short id, e.g. `estimate`. Its page is `#games/estimate`.
+
+1. **Create `games/estimate.js`.** Copy `games/quiz.js` and keep the same shape:
+   - Game rules at the top (no screen code) with a `module.exports` line, so they can be tested.
+   - The **hub card**, which is the `SS.registerGame({ ... })` block: `id`, `icon` (an emoji), `title`, `description`, `status: "live"`, `maxScore`. The card appears on the hub automatically; there is no separate card list.
+   - `render(root)`: draws the game into `root`. Return a clean-up function that stops timers and loops.
+   - When a game ends, call `SuperScience.xp.recordMinigame({ game: "estimate", subject, score, total }, element)`. It saves the best score and pays XP within the daily cap.
+2. **Remove its "Coming soon" entry** from the list at the top of `games/hub.js` (if it has one).
+3. **Register the script in `index.html`:** add `<script src="games/estimate.js"></script>` after `games/hub.js` and before `app.js`.
+4. **Add it to `sw.js`** (`"games/estimate.js"` in `FILES`) and bump `CACHE_VERSION`.
+5. **Add `tests/estimate.test.js`** for its rules. `tests/structure.test.js` fails if the file isn't loaded and cached.
+6. Follow the **Animation rules** above: timers use `SS.loop`/`performance.now()`, never `setInterval`.
+
 ### Changing the numbers
-Edit **`xp/config.js`**. Every reward, the streak bonus and cap, the level curve (`firstLevelUp`, `extraPerLevel`), the rank names and the aura unlock levels are there. Then run the tests, bump `CACHE_VERSION` in `sw.js`, and push.
+Edit **`xp/config.js`**. Every reward (including `minigames.perCorrect`, `perfectBonus` and `dailyCap`), the streak bonus and cap, the level curve (`firstLevelUp`, `extraPerLevel`), the rank names and the aura unlock levels are there. Then run the tests, bump `CACHE_VERSION` in `sw.js`, and push.
 
 > With today's 15 concepts there are 1,275 XP of one-off rewards (85 XP per concept: 10 for opening it, 50 for its 5 questions, 25 for a perfect score). That's enough for Level 10 (1,170 XP) without any streak bonuses, so the cyan (Level 5) and red (Level 10) auras are both reachable. White-gold (Level 15) needs more concepts or streak days.
 
