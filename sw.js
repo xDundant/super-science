@@ -43,6 +43,7 @@ const FILES = [
   "questions/natural-selection.js",
   "questions/punnett.js",
   "questions/enzymes.js",
+  "nav.js",
   "app.js",
   "manifest.json",
   "icons/icon.svg",

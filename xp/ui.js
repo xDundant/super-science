@@ -66,6 +66,8 @@
     }
     shownLevel = info.level;
     parts.fill.style.transform = `scaleX(${info.progress.toFixed(4)})`;
+    // Let other parts (e.g. the sidebar's mini bar) update too
+    document.dispatchEvent(new CustomEvent("ss:xp", { detail: { info, streak, aura: auraOf(state.chosenAura) } }));
     bar.setAttribute("aria-label",
       `Power level: ${info.rank}, level ${info.level}. ` +
       (info.maxed ? "Max level. " : `${info.xpIntoLevel} of ${info.xpForNextLevel} XP to the next level. `) +

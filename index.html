@@ -19,11 +19,16 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- Sidebar: permanent on wide screens, a slide-out drawer on phones (nav.js) -->
+  <nav class="sidebar" id="sidebar" aria-label="Main menu"></nav>
+  <div class="backdrop" id="backdrop" hidden></div>
+
   <header class="site-header">
     <h1 class="logo"><a href="#" aria-label="Super Science home">SUPER <span>SCIENCE</span></a></h1>
     <div class="header-row">
+      <button type="button" class="menu-btn" id="menu-btn" aria-label="Open menu" aria-expanded="false" aria-controls="sidebar">☰</button>
       <a class="power" id="power" href="#profile" aria-label="Power level. Open profile."></a>
-      <button type="button" class="sound-toggle" id="sound-toggle" aria-label="Sound">🔊</button>
+      <button type="button" class="sound-toggle" id="sound-toggle" data-sound-toggle aria-label="Sound">🔊</button>
     </div>
   </header>
 
@@ -75,6 +80,7 @@
   <script src="questions/natural-selection.js"></script>
   <script src="questions/punnett.js"></script>
   <script src="questions/enzymes.js"></script>
+  <script src="nav.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

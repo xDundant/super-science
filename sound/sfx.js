@@ -200,18 +200,21 @@
   }
 
   /* ---------- Speaker button in the header ---------- */
-  let button = null;
+  // Every button with data-sound-toggle (header icon, sidebar item) shows the same state.
+  // data-sound-toggle="label" shows words as well as the icon.
   function renderButton() {
-    if (!button) return;
-    button.textContent = muted ? "🔇" : "🔊";
-    button.setAttribute("aria-label", muted ? "Sound is off. Turn sound on" : "Sound is on. Turn sound off");
-    button.setAttribute("aria-pressed", String(!muted));
-    button.title = muted ? "Sound off" : "Sound on";
+    document.querySelectorAll("[data-sound-toggle]").forEach((b) => {
+      if (b.dataset.soundToggle === "label") {
+        b.innerHTML = `<span class="sb-ico" aria-hidden="true">${muted ? "🔇" : "🔊"}</span>Sound: ${muted ? "off" : "on"}`;
+      } else b.textContent = muted ? "🔇" : "🔊";
+      b.setAttribute("aria-label", muted ? "Sound is off. Turn sound on" : "Sound is on. Turn sound off");
+      b.setAttribute("aria-pressed", String(!muted));
+      b.title = muted ? "Sound off" : "Sound on";
+    });
   }
   function setupButton() {
-    button = document.getElementById("sound-toggle");
-    if (!button) return;
-    button.addEventListener("click", () => {
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest("[data-sound-toggle]")) return;
       setMuted(!muted);
       if (!muted) { ensureContext(); request("xp"); } // little ding so you know it's on
     });
@@ -230,6 +233,7 @@
     isMuted: () => muted,
     setMuted,
     toggle: () => setMuted(!muted),
+    refreshButtons: () => renderButton(), // call after adding a new [data-sound-toggle] button
     _debug: { log, sounds: SOUNDS, priority: PRIORITY, get context() { return ctx; } },
   };
 })();

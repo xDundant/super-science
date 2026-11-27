@@ -96,6 +96,8 @@
       renderHome();
       current = "home";
     }
+    // Tell the sidebar which page is showing (for highlighting)
+    document.dispatchEvent(new CustomEvent("ss:route", { detail: { route: current } }));
   }
 
   window.addEventListener("hashchange", route);
